@@ -269,3 +269,89 @@ class TestTaskServiceBulkCreateTasks:
         """bulk_create_tasks com lista vazia deve retornar sem erro."""
         task_service.bulk_create_tasks([])
         assert task_service.get_all_tasks() == []
+
+
+class TestTaskServiceValidacaoColuna:
+    """Testes de validação semântica de coluna_kanban (DT-042).
+
+    Precursor de DT-013 (FK real). Garante que os 4 métodos que aceitam
+    coluna_kanban rejeitem colunas inexistentes com ValueError claro.
+    """
+
+    def test_create_task_coluna_inexistente_levanta_value_error(
+        self, task_service: TaskService
+    ) -> None:
+        """create_task deve rejeitar coluna que não existe no banco."""
+        with pytest.raises(ValueError, match="não existe"):
+            task_service.create_task("Título", coluna_kanban="Coluna Fantasma")
+
+    def test_create_task_coluna_existente_funciona(
+        self, task_service: TaskService
+    ) -> None:
+        """create_task deve aceitar colunas que existem no banco."""
+        task = task_service.create_task("Título", coluna_kanban="A Fazer")
+        assert task.coluna_kanban == "A Fazer"
+
+    def test_create_task_in_column_coluna_inexistente_levanta_value_error(
+        self, task_service: TaskService
+    ) -> None:
+        """create_task_in_column deve rejeitar coluna inexistente."""
+        with pytest.raises(ValueError, match="não existe"):
+            task_service.create_task_in_column("Título", "Coluna Inexistente")
+
+    def test_create_task_in_column_coluna_existente_funciona(
+        self, task_service: TaskService
+    ) -> None:
+        """create_task_in_column deve aceitar colunas existentes."""
+        task = task_service.create_task_in_column("Título", "Em Andamento")
+        assert task.coluna_kanban == "Em Andamento"
+
+    def test_update_task_coluna_inexistente_levanta_value_error(
+        self, task_service: TaskService
+    ) -> None:
+        """update_task deve rejeitar coluna_kanban inexistente."""
+        task = task_service.create_task("Título Original")
+        with pytest.raises(ValueError, match="não existe"):
+            task_service.update_task(task.id, coluna_kanban="Coluna Fantasma")
+
+    def test_update_task_coluna_existente_funciona(
+        self, task_service: TaskService
+    ) -> None:
+        """update_task deve aceitar coluna_kanban existente."""
+        task = task_service.create_task("Título Original")
+        task_atualizada = task_service.update_task(
+            task.id, coluna_kanban="Em Andamento"
+        )
+        assert task_atualizada.coluna_kanban == "Em Andamento"
+
+    def test_update_task_sem_coluna_kanban_nao_valida_coluna(
+        self, task_service: TaskService
+    ) -> None:
+        """update_task sem coluna_kanban nos kwargs não deve validar coluna."""
+        task = task_service.create_task("Título Original")
+        # Deve funcionar sem ValueError — não há coluna para validar
+        task_atualizada = task_service.update_task(task.id, titulo="Novo Título")
+        assert task_atualizada.titulo == "Novo Título"
+
+    def test_move_to_column_coluna_inexistente_levanta_value_error(
+        self, task_service: TaskService
+    ) -> None:
+        """move_to_column deve rejeitar coluna inexistente."""
+        task = task_service.create_task("Título")
+        with pytest.raises(ValueError, match="não existe"):
+            task_service.move_to_column(task.id, "Coluna Fantasma", 0)
+
+    def test_move_to_column_coluna_existente_funciona(
+        self, task_service: TaskService
+    ) -> None:
+        """move_to_column deve aceitar colunas existentes."""
+        task = task_service.create_task("Título")
+        task_movida = task_service.move_to_column(task.id, "Em Andamento", 0)
+        assert task_movida.coluna_kanban == "Em Andamento"
+
+    def test_mensagem_de_erro_lista_colunas_disponiveis(
+        self, task_service: TaskService
+    ) -> None:
+        """A mensagem de erro deve mencionar as colunas disponíveis."""
+        with pytest.raises(ValueError, match="Colunas disponíveis"):
+            task_service.create_task("Título", coluna_kanban="Inexistente")

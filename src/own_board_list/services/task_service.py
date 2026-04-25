@@ -41,6 +41,20 @@ class TaskService(QObject):
         self._task_repo = task_repo
         self._column_repo = column_repo
 
+    def _validar_coluna_existe(self, coluna: str) -> None:
+        """Levanta ValueError se a coluna informada não existe no banco.
+
+        Precursor de DT-013 (FK real entre tasks e kanban_columns). Esta guarda
+        mínima evita tarefas órfãs invisíveis no Kanban enquanto a FK não é
+        implementada.
+        """
+        nomes_existentes = {c.nome for c in self._column_repo.get_all()}
+        if coluna not in nomes_existentes:
+            raise ValueError(
+                f"A coluna '{coluna}' não existe. "
+                f"Colunas disponíveis: {sorted(nomes_existentes)}."
+            )
+
     def create_task(
         self,
         titulo: str,
@@ -50,6 +64,8 @@ class TaskService(QObject):
         coluna_kanban: str = COLUNA_PADRAO,
     ) -> Task:
         """Cria e persiste uma nova tarefa, emitindo o signal task_created."""
+        self._validar_coluna_existe(coluna_kanban)
+
         # Calcula a próxima posição na coluna
         tasks_na_coluna = self._task_repo.get_by_column(coluna_kanban)
         posicao = len(tasks_na_coluna)
@@ -83,6 +99,9 @@ class TaskService(QObject):
         campos_invalidos = set(kwargs) - self._CAMPOS_EDITAVEIS
         if campos_invalidos:
             raise ValueError(f"Campos não editáveis: {campos_invalidos}")
+
+        if "coluna_kanban" in kwargs:
+            self._validar_coluna_existe(kwargs["coluna_kanban"])
 
         task = self._task_repo.get_by_id(task_id)
         if task is None:
@@ -135,6 +154,8 @@ class TaskService(QObject):
         - Coluna "Concluído" → seta status CONCLUIDA
         - Saindo de "Concluído" para outra coluna → seta status PENDENTE
         """
+        self._validar_coluna_existe(coluna)
+
         task = self._task_repo.get_by_id(task_id)
         if task is None:
             raise ValueError(f"Tarefa com ID '{task_id}' não encontrada.")
@@ -195,6 +216,8 @@ class TaskService(QObject):
         Card sempre entra no final da coluna (posição = len(tasks_na_coluna)).
         Emite task_created.
         """
+        self._validar_coluna_existe(coluna)
+
         tasks_na_coluna = self._task_repo.get_by_column(coluna)
         posicao = len(tasks_na_coluna)
 

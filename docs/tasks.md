@@ -1588,7 +1588,7 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ### DT-042 — Validação semântica de `coluna_kanban` em `Task` (referencial soft)
 
-- [ ] **Prioridade:** Baixa
+- [x] **Prioridade:** Baixa
 - **Tipo:** Refactor / Validação
 - **Descrição:** `Task.coluna_kanban` é string livre. `TaskService.create_task`, `update_task`, `move_to_column` não verificam se a coluna informada existe na tabela `kanban_columns`. Resultado: é possível criar tarefa em coluna inexistente, que ficará "órfã" e invisível no Kanban (mas aparece na Todo List). Já parcialmente coberto por DT-013 (mudar para FK), mas DT-013 é refatoração maior; este item é a guarda mínima imediata: validar no `TaskService`.
 - **Solução:** `TaskService` consulta `column_repo.get_all()` (cacheável) e levanta `ValueError` se a coluna não existir, em `create_task`, `create_task_in_column`, `update_task` (quando `coluna_kanban` está em kwargs) e `move_to_column`.
