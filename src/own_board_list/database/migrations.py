@@ -324,3 +324,47 @@ def validar_integridade_pos_migration(conn: sqlite3.Connection) -> None:
         raise RuntimeError(
             f"PRAGMA foreign_key_check detectou violações após migration: {detalhes}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Detecção de versão futura (TASK-057)
+# ---------------------------------------------------------------------------
+
+
+class VersaoFuturaError(RuntimeError):
+    """Levantada quando o banco tem versão de schema superior à da aplicação.
+
+    O arquivo de banco é preservado intacto; o usuário deve usar a versão
+    mais recente da aplicação ou restaurar um backup de versão anterior.
+    """
+
+    def __init__(self, versao_banco: int, versao_app: int) -> None:
+        self.versao_banco = versao_banco
+        self.versao_app = versao_app
+        super().__init__(
+            f"O arquivo de banco de dados está na versão {versao_banco}, "
+            f"mas esta versão da aplicação suporta apenas até a versão {versao_app}. "
+            "Use uma versão mais recente da aplicação ou restaure um backup "
+            "compatível. O arquivo de dados não foi alterado."
+        )
+
+
+def verificar_versao_futura(conn: sqlite3.Connection) -> None:
+    """Verifica se o banco está em versão superior à suportada pela aplicação.
+
+    Deve ser chamada ANTES de qualquer migration, como primeira operação do
+    ``MigrationService``. Não faz nenhuma modificação no banco.
+
+    Args:
+        conn: Conexão SQLite com o banco a verificar.
+
+    Raises:
+        VersaoFuturaError: Se a versão do banco for maior que
+            ``SCHEMA_VERSION_ATUAL``. O banco permanece intacto.
+    """
+    versao_banco = get_schema_version(conn)
+    if versao_banco > SCHEMA_VERSION_ATUAL:
+        raise VersaoFuturaError(
+            versao_banco=versao_banco,
+            versao_app=SCHEMA_VERSION_ATUAL,
+        )
