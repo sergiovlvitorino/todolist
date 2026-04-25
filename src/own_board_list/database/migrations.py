@@ -150,29 +150,48 @@ def initialize_database(conn: sqlite3.Connection) -> None:
     """Cria e/ou atualiza o schema do banco de dados de forma idempotente.
 
     Comportamento:
-    - **Banco novo (v0):** cria ``schema_version``, ``kanban_columns`` e
-      ``tasks`` com o schema compatível v1 (sem FK constraint — FK é adicionada
-      pela migration v1→v2 em bancos de produção). Registra versão 2 (banco novo
-      não precisa de migration). Insere colunas padrão.
+    - **Banco realmente novo (sem tabelas de dados):** cria ``schema_version``,
+      ``kanban_columns`` e ``tasks`` com o schema compatível v1 (sem FK
+      constraint — FK é adicionada pela migration v1→v2 em bancos de produção).
+      Registra versão 2. Insere colunas padrão.
+    - **Banco legado (tabelas existem, sem ``schema_version``):** detectado como
+      v1. Aplica migrations pendentes (v1→v2 em sequência).
     - **Banco na versão atual:** não-op.
-    - **Banco com versão inferior:** aplica migrations pendentes em sequência.
+    - **Banco com versão inferior registrada:** aplica migrations pendentes.
       Em produção, o ``MigrationService`` garante backup e quarentena antes.
-      Em testes isolados (banco ``:memory:`` legado), aplica sem backup.
+      Em testes isolados (banco ``:memory:``), aplica sem backup.
 
-    [DECISÃO] Banco novo registrado como v2 sem usar schema v2 com FK
+    [DECISÃO] Banco novo registrado como v2 sem FK REFERENCES
       Alternativas:
         A) Criar schema v2 completo (com FK REFERENCES) em banco novo.
         B) Criar schema v1 (compatível) e registrar como v2.
       Escolha: B — durante esta onda, o código de serviço ainda usa nomes de
-      colunas (não IDs) em ``coluna_kanban``. A transição nome→ID é parte do
+      colunas (não IDs) em ``coluna_kanban``. A transição nome→ID faz parte do
       DT-013 e será concluída em tasks futuras. Banco novo em testes usa B para
       manter compatibilidade; banco de produção passa pela migration.
+
+    [DECISÃO] Diferenciar banco legado de banco novo
+      Um banco legado tem tabelas ``tasks``/``kanban_columns`` mas não tem a
+      tabela ``schema_version``. A detecção é feita ANTES de criar
+      ``schema_version``: se as tabelas de dados existem, o banco é legado (v1);
+      caso contrário é novo (v0). Isso evita tratar legado como novo e pular
+      a migration.
     """
+    # Detectar se é banco legado (tabelas existem sem schema_version)
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'"
+    )
+    tabelas_existem = cursor.fetchone() is not None
+
     _criar_tabela_schema_version(conn)
     versao_atual = get_schema_version(conn)
 
+    if versao_atual == 0 and tabelas_existem:
+        # Banco legado sem schema_version → tratar como v1 (pré-ADR-005).
+        versao_atual = 1
+
     if versao_atual == 0:
-        # Banco novo — criar schema compatível e registrar como versão atual.
+        # Banco realmente novo — criar schema compatível e registrar como v_atual.
         _criar_schema_v1_compativel(conn)
         set_schema_version(conn, SCHEMA_VERSION_ATUAL)
         conn.commit()
