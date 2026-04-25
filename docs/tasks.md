@@ -1789,8 +1789,8 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-065 — Testes UI do splash ✅
 **Descrição:** progresso > 1,5 s, exibição de quarentena, erro com caminho de backup. **Camada:** testes. **Esforço:** P. **Depende:** TASK-060. **TC aceite:** TC-104, TC-105, TC-106. **Resultado (2026-04-25):** 21 testes verdes em `tests/test_ui/test_splash.py`.
 
-### TASK-066 — Benchmark de migração
-**Descrição:** `pytest.mark.slow` migrando 10 000 tarefas em ≤ 3 s. **Camada:** testes. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-107.
+### TASK-066 — Benchmark de migração ✅
+**Descrição:** `pytest.mark.slow` migrando 10 000 tarefas em ≤ 3 s. **Camada:** testes. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-107. **Resultado (2026-04-25):** 3 testes verdes em `tests/test_integration/test_migration_slow.py`; `duracao_s` dentro do threshold de 3 s.
 
 ### TASK-067 — Atualizar plano de testes e CHANGELOG
 **Descrição:** registrar TC-093..TC-108 em `plano-testes.md`; nota em `CHANGELOG.md` sobre migração automática + backup; marcar DT-040 e DT-013 como concluídas. **Camada:** docs. **Esforço:** P. **Depende:** TASK-066. **TC aceite:** —.

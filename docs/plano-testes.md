@@ -2101,6 +2101,77 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 
 ---
 
+#### TC-095 — Saneamento de prioridade nula/inválida: linha em quarentena (TASK-064)
+
+**Objetivo:** `registrar_em_quarentena` com motivo `prioridade_invalida` cria arquivo diário, preserva `payload_original` e registra `saneamento_aplicado`.
+
+**Arquivo de teste:** `tests/test_database/test_backup_quarantine.py`
+
+**Critérios de aceite:** arquivo de quarentena criado; `motivo == "prioridade_invalida"`; `payload_original` preservado fielmente; `saneamento_aplicado == {"prioridade": "Média"}`.
+
+**Resultado (2026-04-25):** PASS — 2 testes verdes.
+
+---
+
+#### TC-096 — Saneamento de status desconhecido: linha em quarentena (TASK-064)
+
+**Objetivo:** `registrar_em_quarentena` com motivo `status_invalido` preserva valor original e indica saneamento para "Pendente".
+
+**Arquivo de teste:** `tests/test_database/test_backup_quarantine.py`
+
+**Critérios de aceite:** `motivo == "status_invalido"`; `payload_original["status"]` contém valor legado; `saneamento_aplicado == {"status": "Pendente"}`.
+
+**Resultado (2026-04-25):** PASS — 1 teste verde.
+
+---
+
+#### TC-097 — Saneamento de tarefa com coluna inexistente: linha em quarentena (TASK-064)
+
+**Objetivo:** `registrar_em_quarentena` com motivo `coluna_inexistente` preserva id da coluna fantasma e indica realocação.
+
+**Arquivo de teste:** `tests/test_database/test_backup_quarantine.py`
+
+**Critérios de aceite:** `motivo == "coluna_inexistente"`; `payload_original["coluna_kanban"]` contém id fantasma; `saneamento_aplicado["coluna_kanban"]` contém id da coluna padrão.
+
+**Resultado (2026-04-25):** PASS — 1 teste verde.
+
+---
+
+#### TC-098 — Saneamento de data ausente: linha em quarentena com observação (TASK-064)
+
+**Objetivo:** `registrar_em_quarentena` com motivo `data_ausente` preserva `criado_em=None` e inclui observação de migração.
+
+**Arquivo de teste:** `tests/test_database/test_backup_quarantine.py`
+
+**Critérios de aceite:** `motivo == "data_ausente"`; `payload_original["criado_em"] is None`; `saneamento_aplicado` contém campo `observacao` com menção a "data desconhecida".
+
+**Resultado (2026-04-25):** PASS — 1 teste verde.
+
+---
+
+#### TC-101 — Rotação de backup mantém apenas as 3 mais recentes (TASK-064)
+
+**Objetivo:** `rotacionar_backups` com `manter=3` aplica política FIFO; `criar_backup` rejeita arquivo inexistente; `listar_backups` retorna lista ordenada cronologicamente pelo nome.
+
+**Arquivo de teste:** `tests/test_database/test_backup_quarantine.py`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Cenário | Resultado esperado |
+|---|---|---|
+| TC-101a | `criar_backup` com arquivo inexistente | `FileNotFoundError` |
+| TC-101b | `listar_backups` com arquivos em ordem invertida | retorna ordenados por nome |
+| TC-101c | rotacionar com exatamente 3 | nenhum removido |
+| TC-101d | rotacionar com 4 | mais antigo removido; restam 3 |
+| TC-101e | rotacionar com 5 | 2 mais antigos removidos; restam 3 |
+| TC-101f | fluxo completo: criar + rotacionar | backup novo entre os 3 restantes |
+
+**Critérios de aceite:** 16 testes verdes (classes `TestCriarBackup`, `TestListarBackups`, `TestRotacionarBackups`).
+
+**Resultado (2026-04-25):** PASS — 16 testes verdes.
+
+---
+
 #### TC-108 — Defesa em profundidade: domínio×schema (TASK-061)
 
 **Objetivo:** Confirmar que tanto o domínio (`Task.__post_init__`, `KanbanColumn.__post_init__`) quanto o schema SQL (constraints CHECK/NOT NULL/FK da migration v1→v2) rejeitam o mesmo conjunto de estados inválidos, independentemente do caminho de entrada.
@@ -2123,5 +2194,38 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 **Critérios de aceite:** todos os subcasos verdes em `pytest`; `ruff check`, `ruff format --check` e `mypy src/` sem erros.
 
 **Resultado (2026-04-25):** PASS — 20 testes verdes, gates verdes.
+
+---
+
+#### TC-107 — Benchmark: migração de 10 000 tarefas conclui em ≤ 3 s (TASK-066)
+
+**Objetivo:** Garantir que `MigrationService.executar` completo (backup + migration v1→v2 + validação de integridade + rotação de backups) em banco legado com 10 000 tarefas conclui dentro do threshold de 3 s, validando o critério não-funcional de performance da spec (Feature.3) e o risco documentado no plan.md.
+
+**Arquivo de teste:** `tests/test_integration/test_migration_slow.py`
+
+**Marcação:** `@pytest.mark.slow` — execução via `pytest -m slow`.
+
+**Configuração do banco legado:**
+- Schema v1 sem `schema_version`, sem constraints CHECK/NOT NULL/FK (estado real pré-DT-040).
+- 3 colunas padrão com IDs UUID fixos.
+- 10 000 tarefas distribuídas round-robin entre as 3 colunas; 10% com `prioridade=NULL` para exercitar saneamento.
+- Banco em arquivo temporário (não `:memory:`) para incluir custo real de I/O.
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação | Critério |
+|---|---|---|
+| TC-107a | Tempo total de `MigrationService.executar` | `duracao_s ≤ 3,0 s` |
+| TC-107b | `schema_version` registrada após migration | `versao == 2` |
+| TC-107c | Nenhuma tarefa perdida na migration | `COUNT(*) == 10 000` |
+| TC-107d | `MigrationReport.duracao_s` coerente | `0 < duracao_s < 30 s` |
+
+**Critérios de aceite:**
+- `report.sucesso == True` antes da verificação de tempo (falha de migration != falha de performance).
+- `report.versao_destino == 2`.
+- `report.duracao_s ≤ 3,0`.
+- `COUNT(*) FROM tasks == 10 000` após migration.
+
+**Resultado (2026-04-25):** PASS — 3 testes verdes; `duracao_s` medida dentro do threshold de 3 s.
 
 *Fim do Plano de Testes — Own Board List v1.0*
