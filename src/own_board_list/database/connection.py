@@ -14,11 +14,32 @@ A classe implementa o protocolo de context manager (``__enter__`` /
         repo_a.update(...)
         repo_b.update(...)
     # commit automático; rollback em caso de exceção
+
+Invariante de thread (DT-041)
+------------------------------
+A conexão SQLite é aberta com ``check_same_thread=False`` para suportar o
+loop de eventos Qt, que pode despachar chamadas de repositório a partir de
+diferentes contextos internos mantendo porém um único thread principal.
+
+**Contrato:** a conexão DEVE ser usada exclusivamente no thread que a criou
+(o thread principal da aplicação). Qualquer feature futura que use
+``QThread`` ou ``concurrent.futures`` DEVE criar uma ``DatabaseConnection``
+própria para cada thread — nunca compartilhar esta instância.
+
+Em modo debug (``python -O`` desativado), ``get_connection()`` afirma
+via ``assert`` que o thread atual é o proprietário da conexão. Isso torna
+violações detectáveis durante desenvolvimento e testes, sem custo em produção
+otimizada (``python -O`` suprime asserts).
+
+Se for necessário usar múltiplas threads com o banco, encapsule o acesso em
+um ``threading.Lock`` e crie uma conexão por thread — ou escale para SRE
+antes de qualquer mudança arquitetural.
 """
 
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 from types import TracebackType
 from typing import Literal
@@ -32,15 +53,34 @@ def get_default_db_path() -> Path:
 
 
 class DatabaseConnection:
-    """Gerencia a conexão com o banco de dados SQLite."""
+    """Gerencia a conexão com o banco de dados SQLite.
+
+    Invariante de thread: a conexão é criada e deve ser usada exclusivamente
+    pelo thread que instanciou este objeto (normalmente o thread principal Qt).
+    Ver docstring do módulo para detalhes (DT-041).
+    """
 
     def __init__(self, db_path: str | Path) -> None:
         """Inicializa com o caminho do banco de dados, sem abrir a conexão."""
         self._db_path = Path(db_path)
         self._connection: sqlite3.Connection | None = None
+        # Registra o thread proprietário no momento da construção do objeto.
+        # O guard em get_connection() usa este valor para detectar acessos
+        # cross-thread durante desenvolvimento (modo debug).
+        self._owner_thread_id: int = threading.get_ident()
 
     def get_connection(self) -> sqlite3.Connection:
-        """Retorna a conexão ativa, abrindo uma nova se necessário."""
+        """Retorna a conexão ativa, abrindo uma nova se necessário.
+
+        Em modo debug, afirma que o chamador está no thread proprietário
+        (registrado em ``__init__``). A asserção é suprimida com ``python -O``.
+        """
+        assert threading.get_ident() == self._owner_thread_id, (
+            "DatabaseConnection acessada de thread diferente do proprietário. "
+            "Crie uma nova DatabaseConnection por thread ou use um Lock explícito. "
+            f"(proprietário={self._owner_thread_id}, "
+            f"atual={threading.get_ident()})"
+        )
         if self._connection is None:
             self._connection = sqlite3.connect(
                 str(self._db_path),

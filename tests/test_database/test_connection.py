@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
@@ -205,6 +206,65 @@ class TestDatabaseConnectionTransactionNesting:
         reordenadas = repo.get_all()
         assert reordenadas[0].posicao == 0
         assert reordenadas[-1].posicao == len(reordenadas) - 1
+        db.close()
+
+
+class TestDatabaseConnectionThreadGuard:
+    """Testes do invariante de thread em DatabaseConnection (DT-041).
+
+    [DECISÃO] Manter check_same_thread=False com assert de thread proprietário
+      Alternativas: A) voltar a check_same_thread=True |
+                    B) manter False + threading.Lock |
+                    C) manter False + assert em modo debug
+      Escolha: C
+      Por quê: a app é single-thread; voltar a True exigiria refatoração do
+               loop Qt; Lock seria overhead desnecessário. O assert detecta
+               violações durante desenvolvimento (modo debug) sem custo em
+               produção otimizada.
+    """
+
+    def test_get_connection_no_mesmo_thread_funciona(self, tmp_path: Path) -> None:
+        """Acesso no thread proprietário deve funcionar sem erro."""
+        db = DatabaseConnection(tmp_path / "test_thread.db")
+        conn = db.get_connection()
+        assert isinstance(conn, sqlite3.Connection)
+        db.close()
+
+    def test_owner_thread_registrado_na_construcao(self, tmp_path: Path) -> None:
+        """O ID do thread proprietário deve ser o thread que criou o objeto."""
+        db = DatabaseConnection(tmp_path / "test_thread_owner.db")
+        assert db._owner_thread_id == threading.get_ident()
+        db.close()
+
+    def test_get_connection_de_outro_thread_levanta_assertion_error(
+        self, tmp_path: Path
+    ) -> None:
+        """Acesso de thread diferente do proprietário deve levantar AssertionError
+        em modo debug (sem python -O)."""
+        db = DatabaseConnection(tmp_path / "test_thread_cross.db")
+        # Abre a conexão no thread principal (proprietário)
+        db.get_connection()
+
+        erros: list[BaseException] = []
+
+        def acesso_cruzado() -> None:
+            try:
+                db.get_connection()
+            except AssertionError as exc:
+                erros.append(exc)
+
+        t = threading.Thread(target=acesso_cruzado)
+        t.start()
+        t.join()
+
+        # Em modo debug (__debug__ == True), o assert deve ter sido disparado.
+        if __debug__:
+            assert len(erros) == 1
+            assert "proprietário" in str(erros[0]) or "owner" in str(erros[0]).lower()
+        else:
+            # Com python -O, asserts são suprimidos — sem erros esperados.
+            assert len(erros) == 0
+
         db.close()
 
 

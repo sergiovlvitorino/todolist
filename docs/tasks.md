@@ -1575,7 +1575,7 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ### DT-041 — ⚠️ `check_same_thread=False` sem lock explícito
 
-- [ ] **Prioridade:** Baixa
+- [x] **Prioridade:** Baixa
 - **Tipo:** Vulnerabilidade (race condition latente)
 - **Descrição:** `DatabaseConnection.get_connection` chama `sqlite3.connect(..., check_same_thread=False)`. Hoje a aplicação é single-threaded (loop Qt único), então não há race. Porém, o flag desabilita o guard nativo do `sqlite3` — qualquer feature futura que use `QThread` ou `concurrent.futures` (ex.: exportação assíncrona da US-15, importação em background) introduzirá race conditions silenciosas em `commit`/`rollback`.
 - **Solução:** documentar invariante "conexão usada apenas no thread principal" em docstring; adicionar `assert threading.get_ident() == self._owner_thread` opcional em modo debug; ou trocar para `check_same_thread=True` (default) e revisar testes — a maioria dos repos é single-thread mesmo. Alternativa: encapsular acesso em `Lock` se houver necessidade de threads.
