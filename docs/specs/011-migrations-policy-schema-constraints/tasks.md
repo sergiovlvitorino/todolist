@@ -28,18 +28,18 @@
 
 | # | ID | Descrição | Camada | Esforço | Depende | TC aceite |
 |---|---|---|---|---|---|---|
-| 1 | TASK-047 | ADR-005 — Estratégia de versionamento de schema SQLite (`docs/adr-005-schema-versioning.md`) | docs | P | — | — (gate de spec) |
-| 2 | TASK-048 | Adicionar constantes em `utils/constants.py` (`SCHEMA_VERSION_ATUAL=2`, `LIMIAR_PROGRESSO_MIGRACAO_S=1.5`, `BACKUPS_RETIDOS=3`, `QUARENTENA_DIR`) | utils | P | TASK-047 | TC-093 |
-| 3 | TASK-049 | Criar tabela `schema_version` e funções `get_schema_version`/`set_schema_version` em `database/migrations.py`; ativar `PRAGMA foreign_keys=ON` em `connection.py` | database | P | TASK-048 | TC-093, TC-094 |
-| 4 | TASK-050 | Criar módulo `database/backup.py` (`criar_backup`, `rotacionar_backups`, `listar_backups`) | database | P | TASK-048 | TC-101 |
-| 5 | TASK-051 | Criar módulo `database/quarantine.py` (`RegistroQuarentena`, `registrar_em_quarentena`, escrita append-only em JSON diário) | database | P | TASK-048 | TC-095..TC-098 |
-| 6 | TASK-052 | Definir `Migration` (dataclass) e refatorar `initialize_database` para motor versionado iterando `MIGRATIONS` em ordem; bootstrap idempotente do banco novo (v0→v2 direto) | database | M | TASK-049 | TC-093, TC-094 |
-| 7 | TASK-053 | Implementar migration v1→v2 — saneamento de `tasks` (prioridade, status, coluna_kanban, datas) com escrita em quarentena | database | M | TASK-051, TASK-052 | TC-095, TC-096, TC-097, TC-098 |
-| 8 | TASK-054 | Implementar migration v1→v2 — saneamento de `kanban_columns` (criado_em ausente) com escrita em quarentena | database | P | TASK-051, TASK-052 | TC-098 |
-| 9 | TASK-055 | Implementar migration v1→v2 — recriação de `tasks_new` e `kanban_columns_new` com `CHECK`, `NOT NULL`, `FK ON DELETE RESTRICT`; copiar dados saneados; trocar tabelas; recriar índices | database | M | TASK-053, TASK-054 | TC-102, TC-103 |
-| 10 | TASK-056 | Validação final pós-migration: `PRAGMA integrity_check`, `PRAGMA foreign_key_check`; falha → rollback + restauração do backup | database | P | TASK-055 | TC-100, TC-103 |
-| 11 | TASK-057 | Detecção de versão futura: `versao_origem > SCHEMA_VERSION_ATUAL` falha com erro claro e arquivo intacto | database | P | TASK-052 | TC-099 |
-| 12 | TASK-058 | Criar `services/migration_service.py` com `MigrationService.executar` orquestrando backup → migrations → validação → rotação → `MigrationReport` | services | M | TASK-050, TASK-056, TASK-057 | TC-094, TC-100 |
+| 1 | TASK-047 | ADR-005 — Estratégia de versionamento de schema SQLite (`docs/adr-005-schema-versioning.md`) | docs | P | — | — (gate de spec) | ✅ |
+| 2 | TASK-048 | Adicionar constantes em `utils/constants.py` (`SCHEMA_VERSION_ATUAL=2`, `LIMIAR_PROGRESSO_MIGRACAO_S=1.5`, `BACKUPS_RETIDOS=3`, `QUARENTENA_DIR`) | utils | P | TASK-047 | TC-093 | ✅ |
+| 3 | TASK-049 | Criar tabela `schema_version` e funções `get_schema_version`/`set_schema_version` em `database/migrations.py`; ativar `PRAGMA foreign_keys=ON` em `connection.py` | database | P | TASK-048 | TC-093, TC-094 | ✅ |
+| 4 | TASK-050 | Criar módulo `database/backup.py` (`criar_backup`, `rotacionar_backups`, `listar_backups`) | database | P | TASK-048 | TC-101 | ✅ |
+| 5 | TASK-051 | Criar módulo `database/quarantine.py` (`RegistroQuarentena`, `registrar_em_quarentena`, escrita append-only em JSON diário) | database | P | TASK-048 | TC-095..TC-098 | ✅ |
+| 6 | TASK-052 | Definir `Migration` (dataclass) e refatorar `initialize_database` para motor versionado iterando `MIGRATIONS` em ordem; bootstrap idempotente do banco novo (v0→v2 direto) | database | M | TASK-049 | TC-093, TC-094 | ✅ |
+| 7 | TASK-053 | Implementar migration v1→v2 — saneamento de `tasks` (prioridade, status, coluna_kanban, datas) com escrita em quarentena | database | M | TASK-051, TASK-052 | TC-095, TC-096, TC-097, TC-098 | ✅ |
+| 8 | TASK-054 | Implementar migration v1→v2 — saneamento de `kanban_columns` (criado_em ausente) com escrita em quarentena | database | P | TASK-051, TASK-052 | TC-098 | ✅ |
+| 9 | TASK-055 | Implementar migration v1→v2 — recriação de `tasks_new` e `kanban_columns_new` com `CHECK`, `NOT NULL`, `FK ON DELETE RESTRICT`; copiar dados saneados; trocar tabelas; recriar índices | database | M | TASK-053, TASK-054 | TC-102, TC-103 | ✅ |
+| 10 | TASK-056 | Validação final pós-migration: `PRAGMA integrity_check`, `PRAGMA foreign_key_check`; falha → rollback + restauração do backup | database | P | TASK-055 | TC-100, TC-103 | ✅ |
+| 11 | TASK-057 | Detecção de versão futura: `versao_origem > SCHEMA_VERSION_ATUAL` falha com erro claro e arquivo intacto | database | P | TASK-052 | TC-099 | ✅ |
+| 12 | TASK-058 | Criar `services/migration_service.py` com `MigrationService.executar` orquestrando backup → migrations → validação → rotação → `MigrationReport` | services | M | TASK-050, TASK-056, TASK-057 | TC-094, TC-100 | ✅ |
 | 13 | TASK-059 | Integrar `MigrationService` no bootstrap da aplicação antes de instanciar a UI | services | P | TASK-058 | TC-094 |
 | 14 | TASK-060 | Criar `ui/splash.py` (`MigrationSplash`) com indicador condicional (> 1,5 s), exibição de quarentena e modo de erro com caminho do backup | ui | M | TASK-058 | TC-104, TC-105, TC-106 |
 | 15 | TASK-061 | Auditoria de consistência domínio×schema: revisar mensagens de erro de `Task`/`KanbanColumn` para alinhar com `IntegrityError` do schema | models | P | TASK-055 | TC-108 |
