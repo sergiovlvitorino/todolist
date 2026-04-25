@@ -67,8 +67,8 @@ Esta feature define o comportamento esperado do sistema quanto a (a) integridade
 
 **Critérios de aceite:**
 - [ ] Ao iniciar uma versão do aplicativo cujo formato de dados evoluiu em relação à versão anterior, a atualização do formato é **automática**, **silenciosa quando bem-sucedida** e **executada antes da interface ficar disponível**.
-- [ ] Antes de qualquer alteração no formato de dados, o sistema cria uma **cópia de segurança** do arquivo de dados atual em local previsível, com nome que inclua a data/hora e a versão de origem. A cópia permanece após a atualização para permitir recuperação manual.
-- [ ] Se a atualização for bem-sucedida, o usuário **não percebe nada além de uma indicação de progresso curta** quando a duração ultrapassar um limiar perceptível.
+- [ ] Antes de qualquer alteração no formato de dados, o sistema cria uma **cópia de segurança** do arquivo de dados atual em local previsível, com nome que inclua a data/hora e a versão de origem. A cópia permanece após a atualização para permitir recuperação manual. O sistema mantém **as 3 cópias mais recentes** (rotação simples); cópias mais antigas são descartadas automaticamente. Política de retenção configurável fica fora de escopo nesta entrega.
+- [ ] Se a atualização for bem-sucedida, o usuário **não percebe nada além de uma indicação de progresso curta** quando a duração ultrapassar **1,5 segundo**. Abaixo desse limiar, a transição é silenciosa (splash sem indicador). O caminho do arquivo de quarentena (quando existir registros saneados) é exibido no splash de migração.
 - [ ] Se a atualização **falhar**, o aplicativo exibe uma mensagem clara explicando: (a) que a atualização não pôde ser concluída, (b) onde está a cópia de segurança, (c) como obter ajuda. O aplicativo **não** abre em estado parcial.
 - [ ] Após uma atualização bem-sucedida, **nenhuma tarefa criada na versão anterior é perdida** e todas continuam acessíveis com os mesmos atributos visíveis ao usuário (título, descrição, prioridade, vencimento, status, coluna).
 - [ ] O sistema sabe identificar a versão do formato de dados em uso e **recusa-se a abrir** um arquivo de dados de versão **mais nova** do que a aplicação suporta, preservando o arquivo intacto.
@@ -76,8 +76,14 @@ Esta feature define o comportamento esperado do sistema quanto a (a) integridade
 
 **Cenários negativos / erros:**
 - Quando o usuário inicia o aplicativo pela **primeira vez** (não há arquivo de dados anterior), nenhuma migração ocorre — o aplicativo simplesmente cria o armazenamento já no formato atual e abre normalmente.
-- Quando dados pré-existentes contêm valores que **não satisfazem** as novas regras de integridade (ex.: tarefas com status nulo herdadas de versão antiga), a atualização aplica uma estratégia documentada de saneamento: ou (a) atribui um valor padrão definido nesta spec, ou (b) move o registro para uma área de quarentena visível ao usuário, ou (c) interrompe a atualização e instrui o usuário. **Qual destas estratégias adotar para cada campo é uma questão em aberto** — ver seção correspondente.
+- Quando dados pré-existentes contêm valores que **não satisfazem** as novas regras de integridade, a atualização aplica a estratégia de saneamento definida abaixo (item "Estratégias de saneamento de dados legados"). Em todos os casos, o evento é registrado em log de auditoria e o registro original é preservado em arquivo lateral de quarentena.
 - Quando a atualização é interrompida por queda de energia ou fechamento forçado do aplicativo, ao reabrir o sistema detecta o estado intermediário e (a) retoma de onde parou ou (b) restaura a partir da cópia de segurança e tenta novamente. O usuário não fica com dados parcialmente migrados.
+
+**Estratégias de saneamento de dados legados (decisões):**
+- **Prioridade ausente ou desconhecida:** atribuir o padrão **"Média"** (consistente com US-01). Sem quarentena.
+- **Status ausente ou desconhecido:** atribuir o padrão **"Pendente"** (estado seguro; o usuário pode marcar como concluída depois).
+- **Tarefa apontando para coluna inexistente:** **realocar para a coluna padrão "A Fazer"** (sempre presente). Não bloqueia a migração; o evento é registrado no log de auditoria e o registro original é copiado para o arquivo lateral de quarentena.
+- **`criado_em`/`atualizado_em` ausentes:** atribuir o instante UTC do momento da migração (`datetime.utcnow()`), com observação no log: "data desconhecida (migrado em YYYY-MM-DD)".
 
 ---
 
@@ -89,6 +95,7 @@ Esta feature define o comportamento esperado do sistema quanto a (a) integridade
 - [ ] Ao iniciar e detectar que o arquivo de dados **não pode ser lido** (corrompido, truncado, formato irreconhecível), o aplicativo **não trava nem abre vazio silenciosamente**.
 - [ ] O usuário recebe uma mensagem clara que: identifica o problema, indica o caminho do arquivo problemático, indica se existem cópias de segurança recentes (ver Feature.3) e oferece pelo menos uma ação de recuperação (ex.: iniciar com arquivo novo preservando o anterior em quarentena).
 - [ ] Nenhum dado é descartado automaticamente sem confirmação do usuário ou sem ser preservado em quarentena.
+- [ ] A quarentena nesta entrega é **apenas um arquivo lateral** em `~/.own-board-list/quarantine_YYYYMMDD.json`. O caminho é registrado no log e exibido no splash quando aplicável. **Não há UI de quarentena nesta versão** — interface gráfica de gestão de quarentena fica fora de escopo.
 
 **Cenários negativos / erros:**
 - Se o arquivo de dados está ausente mas existe uma cópia de segurança recente, o aplicativo informa o usuário e oferece restaurar a partir dela.
@@ -109,17 +116,22 @@ Esta feature define o comportamento esperado do sistema quanto a (a) integridade
 - **Edição manual de cópias de segurança** pelo usuário dentro do aplicativo — fora de escopo; o usuário acessa via sistema de arquivos.
 - **Sincronização entre dispositivos** — princípio inviolável da constitution: aplicação 100% offline.
 - **Ferramenta de inspeção/diagnóstico** do arquivo de dados embutida no aplicativo — fora de escopo.
+- **Interface gráfica para gestão de quarentena** — nesta entrega a quarentena é apenas um arquivo lateral em `~/.own-board-list/quarantine_YYYYMMDD.json`. UI dedicada fica para feature futura.
+- **Política de retenção configurável de backups** — esta entrega adota rotação fixa (3 últimas). Configuração pelo usuário fica fora de escopo.
+- **Renomeação de coluna do quadro (Feature.2 ampliada)** — o suporte de identidade estável da coluna (FK por `id`) é coberto aqui (DT-013), mas o fluxo de UI de renomeação pertence a **US-11** e não compõe esta DT. Esta feature técnica trata exclusivamente de integridade do schema.
 
 ## Questões em aberto
 
-- [ ] Para tarefas pré-existentes com **prioridade ausente ou desconhecida**, qual estratégia adotar: assumir "Média" como padrão, mover para quarentena, ou interromper a atualização e pedir ao usuário?
-- [ ] Para tarefas pré-existentes com **status ausente**, qual estratégia: assumir "Pendente" como padrão, ou quarentena?
-- [ ] Para tarefas pré-existentes **apontando para coluna inexistente** (consequência de DT-013 antes da feature), qual estratégia: realocar para a coluna padrão "A Fazer", mover para quarentena, ou interromper a atualização?
-- [ ] Para tarefas pré-existentes **sem data de criação ou atualização**, qual valor adotar: a data/hora da migração, ou um marcador especial?
-- [ ] Quantas **gerações de cópia de segurança** o aplicativo deve manter automaticamente antes de descartar as mais antigas (ex.: últimas 3, últimas 10, todas indefinidamente)?
-- [ ] A partir de qual **duração estimada da migração** o sistema deve mostrar indicador de progresso ao usuário (ex.: > 1 segundo, > 3 segundos)?
-- [ ] Se o usuário ficar com tarefas em **quarentena**, como ele acessa essa quarentena? É um recurso visível na interface ou apenas um arquivo lateral documentado?
-- [ ] A renomeação de coluna (Feature.2) já é coberta pelo escopo de US-09 ou exige confirmação adicional do PO de que está fora do escopo desta feature técnica?
+> Resolvidas em 2026-04-25 (modo auto). Decisões incorporadas nos critérios de aceite e em "Fora de escopo".
+
+- [x] **Prioridade ausente em legacy** → assumir padrão **"Média"** (consistente com US-01). Sem quarentena.
+- [x] **Status ausente em legacy** → assumir padrão **"Pendente"** (estado seguro; usuário marca como concluída depois).
+- [x] **Tarefa apontando para coluna inexistente** → **realocar para "A Fazer"** (sempre presente). Logar em arquivo de auditoria; não bloquear a migração.
+- [x] **`criado_em`/`atualizado_em` ausentes** → usar `datetime.utcnow()` no momento da migração com observação no log "data desconhecida (migrado em YYYY-MM-DD)".
+- [x] **Gerações de backup** → manter as **3 últimas** (rotação simples). Retenção configurável fica fora de escopo nesta entrega.
+- [x] **Limiar de progresso** → exibir indicador de progresso apenas se a migração ultrapassar **1,5 segundo**. Abaixo, splash silencioso.
+- [x] **Acesso à quarentena** → **apenas arquivo lateral** em `~/.own-board-list/quarantine_YYYYMMDD.json`. Sem UI v1 (fora de escopo). Caminho exibido no splash de migração e logado no console.
+- [x] **Renomeação de coluna** → fora de escopo desta DT (cobre **US-11**). Esta DT trata apenas de integridade do schema.
 
 ## Ligações
 
