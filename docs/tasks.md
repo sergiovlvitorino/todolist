@@ -1768,7 +1768,7 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-058 — `MigrationService` orquestrador
 **Descrição:** `services/migration_service.py` com `executar(db_path) -> MigrationReport` orquestrando backup → migrations → validação → rotação → relatório. **Camada:** services. **Esforço:** M. **Depende:** TASK-050, TASK-056, TASK-057. **TC aceite:** TC-094, TC-100.
 
-### TASK-059 — Integrar bootstrap
+### TASK-059 — Integrar bootstrap ✅
 **Descrição:** chamar `MigrationService.executar` antes de instanciar a UI; abortar UI se falhar. **Camada:** services. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-094.
 
 ### TASK-060 — `MigrationSplash` (UI) ✅

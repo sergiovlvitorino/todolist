@@ -40,7 +40,7 @@
 | 10 | TASK-056 | Validação final pós-migration: `PRAGMA integrity_check`, `PRAGMA foreign_key_check`; falha → rollback + restauração do backup | database | P | TASK-055 | TC-100, TC-103 | ✅ |
 | 11 | TASK-057 | Detecção de versão futura: `versao_origem > SCHEMA_VERSION_ATUAL` falha com erro claro e arquivo intacto | database | P | TASK-052 | TC-099 | ✅ |
 | 12 | TASK-058 | Criar `services/migration_service.py` com `MigrationService.executar` orquestrando backup → migrations → validação → rotação → `MigrationReport` | services | M | TASK-050, TASK-056, TASK-057 | TC-094, TC-100 | ✅ |
-| 13 | TASK-059 | Integrar `MigrationService` no bootstrap da aplicação antes de instanciar a UI | services | P | TASK-058 | TC-094 |
+| 13 | TASK-059 | Integrar `MigrationService` no bootstrap da aplicação antes de instanciar a UI | services | P | TASK-058 | TC-094 | ✅ |
 | 14 | TASK-060 | Criar `ui/splash.py` (`MigrationSplash`) com indicador condicional (> 1,5 s), exibição de quarentena e modo de erro com caminho do backup | ui | M | TASK-058 | TC-104, TC-105, TC-106 | ✅ |
 | 15 | TASK-061 | Auditoria de consistência domínio×schema: revisar mensagens de erro de `Task`/`KanbanColumn` para alinhar com `IntegrityError` do schema | models | P | TASK-055 | TC-108 | ✅ |
 | 16 | TASK-062 | Testes de migração — fixtures de bancos legados (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura) | testes | M | TASK-058 | TC-094..TC-099 |
