@@ -284,3 +284,43 @@ def _criar_schema_v1_compativel(conn: sqlite3.Connection) -> None:
             " VALUES (?, ?, ?, ?)",
             colunas_padrao,
         )
+
+
+# ---------------------------------------------------------------------------
+# Validação pós-migration (TASK-056)
+# ---------------------------------------------------------------------------
+
+
+def validar_integridade_pos_migration(conn: sqlite3.Connection) -> None:
+    """Executa PRAGMA integrity_check e foreign_key_check após a migration.
+
+    Deve ser chamada com FK enforcement ativo (``PRAGMA foreign_keys = ON``).
+    Levanta ``RuntimeError`` se qualquer inconsistência for detectada, para que
+    o ``MigrationService`` possa fazer rollback e restaurar o backup.
+
+    Args:
+        conn: Conexão SQLite com FK ativa e fora de transação (PRAGMAs de
+            verificação não funcionam dentro de transação ativa).
+
+    Raises:
+        RuntimeError: Se ``integrity_check`` retornar algo diferente de ``"ok"``
+            ou se ``foreign_key_check`` retornar linhas.
+    """
+    # PRAGMA integrity_check retorna uma linha com "ok" se não há problemas.
+    cursor = conn.execute("PRAGMA integrity_check")
+    resultado = cursor.fetchone()
+    if resultado is None or resultado[0] != "ok":
+        falhas = [row[0] for row in conn.execute("PRAGMA integrity_check").fetchall()]
+        raise RuntimeError(f"PRAGMA integrity_check falhou após migration: {falhas}")
+
+    # PRAGMA foreign_key_check retorna linhas para cada violação de FK.
+    cursor = conn.execute("PRAGMA foreign_key_check")
+    violacoes = cursor.fetchall()
+    if violacoes:
+        detalhes = [
+            f"tabela={row[0]} rowid={row[1]} fk_tabela={row[2]} fk_idx={row[3]}"
+            for row in violacoes
+        ]
+        raise RuntimeError(
+            f"PRAGMA foreign_key_check detectou violações após migration: {detalhes}"
+        )
