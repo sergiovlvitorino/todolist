@@ -13,6 +13,37 @@ confiança percebida no produto.
 
 ### Adicionado
 
+- **Migração automática do banco de dados ao atualizar.** Ao iniciar o aplicativo
+  após uma atualização que evolui o formato interno dos dados, a migração ocorre
+  automaticamente, antes da interface abrir. Para a grande maioria dos casos, a
+  transição é silenciosa. Quando a migração demora mais de 1,5 segundo (bancos
+  muito grandes), um indicador de progresso é exibido brevemente.
+
+- **Backup automático antes de migrar.** Imediatamente antes de qualquer
+  alteração no formato de dados, o aplicativo cria uma cópia de segurança do
+  arquivo atual em `~/.own-board-list/`, com nome que inclui a data e hora e a
+  versão de origem (ex.: `data_backup_v1_20260425_143000.db`). As 3 cópias mais
+  recentes são mantidas automaticamente; cópias mais antigas são descartadas.
+  Em caso de falha, uma mensagem exibe o caminho exato do backup e instrui o
+  usuário sobre como obter ajuda.
+
+- **Quarentena de registros inconsistentes.** Dados pré-existentes que não
+  satisfazem as novas regras de integridade (ex.: tarefas sem data de criação,
+  com status desconhecido ou apontando para coluna removida) são corrigidos
+  automaticamente com valores seguros e o registro original é preservado em um
+  arquivo lateral de quarentena (`~/.own-board-list/quarantine_YYYYMMDD.json`).
+  Quando isso ocorre, o caminho do arquivo de quarentena é exibido no splash de
+  migração para que o usuário possa inspecionar. Nenhum dado é descartado
+  silenciosamente.
+
+- **Proteção de integridade no armazenamento.** O banco de dados passou a
+  rejeitar ativamente registros inválidos independentemente do ponto de entrada:
+  tarefas sem título, com prioridade ou status fora dos valores aceitos, com
+  posição negativa, sem data de criação/atualização, ou associadas a uma coluna
+  inexistente. Isso fecha a lacuna entre a validação da interface e a camada de
+  armazenamento, garantindo que dados introduzidos por qualquer ferramenta
+  externa ou regressão futura não causem cards invisíveis ou erros opacos.
+
 - **Criação de card diretamente no Kanban.** Cada coluna agora exibe um botão
   "+ Adicionar card" no rodapé. Ao clicar, um formulário inline aparece na própria
   coluna — sem abrir diálogos — com campos de título, prioridade e data de

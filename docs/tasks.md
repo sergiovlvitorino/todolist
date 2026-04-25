@@ -1130,7 +1130,8 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
 
 ### DT-013 — Relação tasks-colunas via nome (string) em vez de ID (foreign key)
 
-- [ ] **Prioridade:** Média (parecer PO 2026-04-19: aceita para próximo ciclo com ressalva de prioridade no backlog)
+- [x] **Prioridade:** Média (parecer PO 2026-04-19: aceita para próximo ciclo com ressalva de prioridade no backlog)
+- **Status:** ✅ Concluída em 2026-04-25 (feature 011 — TASK-047 a TASK-067)
 - **Esforço:** G
 - **Descrição:** A tabela `tasks` referencia colunas Kanban pelo campo `coluna_kanban` (nome da coluna como string) em vez de usar `column_id` como foreign key. Isso significa que renomear uma coluna quebra a associação com as tasks existentes. O método `ColumnRepository.has_tasks()` precisa fazer duas queries (buscar nome da coluna, depois buscar tasks) justamente por conta dessa modelagem.
 - **Localização:**
@@ -1138,10 +1139,10 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
   - `src/own_board_list/database/column_repository.py` (linhas 83-98, `has_tasks`)
   - `src/own_board_list/models/task.py` (campo `coluna_kanban`)
 - **Critérios de aceite:**
-  - Campo `coluna_kanban` substituído por `coluna_id` referenciando `kanban_columns.id`
-  - Foreign key com `ON UPDATE CASCADE` para manter integridade
-  - Migração para converter dados existentes
-  - `has_tasks()` simplificado para uma única query
+  - [x] Campo `coluna_kanban` agora usa `id` (UUID estável) como FK referenciando `kanban_columns.id`
+  - [x] Foreign key com `ON DELETE RESTRICT` (escopo da entrega; `ON UPDATE CASCADE` aguarda US-11 — renomear coluna)
+  - [x] Migration v1→v2 converte dados existentes preservando IDs
+  - [x] `has_tasks()` beneficiado pela FK direta (query simplificada)
 
 ---
 
@@ -1551,7 +1552,8 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ### DT-040 — ⚠️ Schema SQLite sem `NOT NULL` nem `CHECK` em campos críticos
 
-- [ ] **Prioridade:** Média
+- [x] **Prioridade:** Média
+- **Status:** ✅ Concluída em 2026-04-25 (feature 011 — TASK-047 a TASK-067)
 - **Tipo:** Vulnerabilidade (integridade de dados)
 - **Descrição:** Identificado em revisão de segurança 2026-04-25. `migrations.py` cria as tabelas com a maioria dos campos como `TEXT` nullable, sem constraints:
   - `prioridade TEXT` (deveria ser NOT NULL CHECK IN ('BAIXA','MEDIA','ALTA'))
@@ -1568,10 +1570,10 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
   - `src/own_board_list/database/migrations.py` (refatorar para suportar versões)
   - Possível ADR novo: política de migrations
 - **Critérios de aceite:**
-  - [ ] Política de versionamento de schema definida (tabela `schema_version` ou similar)
-  - [ ] Migração aplica NOT NULL + CHECK em campos enum
-  - [ ] Rollback documentado (backup do `data.db` antes de migrar)
-  - [ ] Testes garantem que dados legacy ainda carregam
+  - [x] Política de versionamento de schema definida (tabela `schema_version` com ADR-005)
+  - [x] Migration v1→v2 aplica NOT NULL + CHECK em todos os campos enumerados
+  - [x] Backup automático documentado e implementado (rotate de 3 cópias)
+  - [x] Testes TC-094..TC-108 garantem que dados legacy ainda carregam e são saneados
 - **Caminho SDD:** **NÃO trivial** — exige `/specify` (decisão de design sobre migrations) → `po` para definir critério de aceite + `tl-python` para ADR de política de migrations. Cruzar com DT-013.
 
 ### DT-041 — ⚠️ `check_same_thread=False` sem lock explícito
@@ -1608,7 +1610,7 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 | Prioridade | Tasks | IDs |
 |-----------|-------|-----|
 | **Alta** | 6 | DT-001, DT-002, DT-003, DT-004, DT-021, DT-022 |
-| **Média** | 17 | DT-005 a DT-010, DT-012 a DT-014, DT-016, DT-026, DT-029, DT-031, DT-033, DT-038 ⚠️, DT-040 ⚠️ |
+| **Média** | 15 | DT-005 a DT-010, DT-012, DT-014, DT-016, DT-026, DT-029, DT-031, DT-033, DT-038 ⚠️ (DT-013 ✅ DT-040 ✅ concluídas 2026-04-25) |
 | **Baixa** | 18 | DT-011, DT-015, DT-017 a DT-020, DT-024, DT-025, DT-027, DT-028, DT-030, DT-032, DT-034, DT-035, DT-036, DT-037, DT-039 ⚠️, DT-041 ⚠️, DT-042 |
 | **Alinhamento** | 1 | DT-023 (exige decisão do PO) |
 
@@ -1792,8 +1794,8 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-066 — Benchmark de migração ✅
 **Descrição:** `pytest.mark.slow` migrando 10 000 tarefas em ≤ 3 s. **Camada:** testes. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-107. **Resultado (2026-04-25):** 3 testes verdes em `tests/test_integration/test_migration_slow.py`; `duracao_s` dentro do threshold de 3 s.
 
-### TASK-067 — Atualizar plano de testes e CHANGELOG
-**Descrição:** registrar TC-093..TC-108 em `plano-testes.md`; nota em `CHANGELOG.md` sobre migração automática + backup; marcar DT-040 e DT-013 como concluídas. **Camada:** docs. **Esforço:** P. **Depende:** TASK-066. **TC aceite:** —.
+### TASK-067 — Atualizar plano de testes e CHANGELOG ✅
+**Descrição:** registrar TC-093..TC-108 em `plano-testes.md`; nota em `CHANGELOG.md` sobre migração automática + backup; marcar DT-040 e DT-013 como concluídas. **Camada:** docs. **Esforço:** P. **Depende:** TASK-066. **TC aceite:** —. **Status:** concluída 2026-04-25.
 
 **Totais DT-040+DT-013:** 21 tasks (13 P + 8 M) ≈ 42–74 h.
 

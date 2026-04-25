@@ -123,6 +123,13 @@ Software desktop para gestão pessoal de tarefas, com duas visões complementare
 - Ao mover para "Concluído", a tarefa é marcada como concluída automaticamente
 - Ao mover de "Concluído" para outra coluna, o status é revertido para pendente
 
+> **Nota técnica (DT-040/DT-013, 2026-04-25):** a exclusão de coluna que contenha
+> cards continua bloqueada (aviso ao usuário), agora reforçada também em nível de
+> banco de dados (`FOREIGN KEY … ON DELETE RESTRICT`). Tarefas que, em bancos
+> pré-existentes, apontassem para colunas inexistentes são automaticamente
+> realocadas para a coluna "A Fazer" na primeira migração, com registro em
+> quarentena.
+
 ---
 
 ### US-10 — Criar card diretamente no Kanban
@@ -152,6 +159,13 @@ Software desktop para gestão pessoal de tarefas, com duas visões complementare
 - Não é possível excluir coluna que contém cards (exibe aviso)
 - Colunas podem ser reordenadas via drag-and-drop
 - Mínimo de 1 coluna no quadro
+
+> **Nota técnica (DT-013, 2026-04-25):** a identidade de cada coluna agora é
+> armazenada por `id` (UUID estável) em vez de nome. Isso torna possível, em
+> versão futura, renomear uma coluna sem perder a associação com suas tarefas.
+> O fluxo de UI de renomeação pertence a esta US-11 e será entregue em ciclo
+> subsequente; a infra de banco que viabiliza o recurso foi incluída no ciclo
+> atual (feature 011).
 
 ---
 

@@ -48,7 +48,7 @@
 | 18 | TASK-064 | Testes de backup/quarentena (rotação 3, escrita append-only, payload preservado) | testes | P | TASK-050, TASK-051 | TC-101, TC-095..TC-098 | ✅ |
 | 19 | TASK-065 | Testes de UI do splash (progresso > 1,5 s, exibição de quarentena, erro com caminho do backup) | testes | P | TASK-060 | TC-104, TC-105, TC-106 | ✅ |
 | 20 | TASK-066 | Benchmark `pytest.mark.slow`: migração de 10 000 tarefas conclui em ≤ 3 s | testes | P | TASK-058 | TC-107 | ✅ |
-| 21 | TASK-067 | Atualizar `docs/plano-testes.md` (adicionar TC-093..TC-108) e `docs/funcionalidades.md`/`CHANGELOG.md` (DT-040 + DT-013 fechadas) | docs | P | TASK-066 | — |
+| 21 | TASK-067 | Atualizar `docs/plano-testes.md` (adicionar TC-093..TC-108) e `docs/funcionalidades.md`/`CHANGELOG.md` (DT-040 + DT-013 fechadas) | docs | P | TASK-066 | — | ✅ |
 
 **Totais:** 21 tasks (13 P + 8 M) ≈ 42–74 h.
 
@@ -87,12 +87,12 @@ A entrega é **irreversível em produção** sob a perspectiva do schema (não h
 
 ## Checklist de encerramento da feature
 
-- [ ] Todos os TCs (TC-093..TC-108) verdes
-- [ ] Gates de qualidade verdes (`pytest`, `ruff check`, `ruff format --check`, `mypy src/`)
-- [ ] ADR-005 merged
-- [ ] DT-040 e DT-013 marcadas como concluídas em `docs/tasks.md`
-- [ ] `funcionalidades.md` atualizado (impacto em US-09/US-11)
-- [ ] `CHANGELOG.md` com nota de migração automática para usuários existentes (mensagem clara sobre backup)
+- [x] Todos os TCs (TC-093..TC-108) verdes
+- [x] Gates de qualidade verdes (`pytest`, `ruff check`, `ruff format --check`, `mypy src/`)
+- [x] ADR-005 merged
+- [x] DT-040 e DT-013 marcadas como concluídas em `docs/tasks.md`
+- [x] `funcionalidades.md` atualizado (impacto em US-09/US-11)
+- [x] `CHANGELOG.md` com nota de migração automática para usuários existentes (mensagem clara sobre backup)
 
 ## Ligações
 
