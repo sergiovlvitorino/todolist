@@ -1500,13 +1500,115 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
 
 ---
 
+## Análise de segurança e validação (ciclo 2026-04-25)
+
+Revisão proativa do Tech Lead em 2026-04-25 buscando vulnerabilidades OWASP aplicáveis a app desktop local (SQLi, path traversal, validação de entrada, race conditions, deserialização insegura, secrets hardcoded). Conclusão geral:
+
+- **Zero SQL injection**: todas as queries em `task_repository.py`, `column_repository.py` e `migrations.py` usam placeholders `?`. Conformidade com princípio 🔒 §4 da constitution.
+- **Zero pickle/eval/exec**: nenhum uso encontrado em `src/`.
+- **Zero secrets hardcoded**: aplicação 100% offline, sem credenciais.
+- **Path traversal**: `get_default_db_path` usa `Path.home() / ".own-board-list"` — sem input do usuário; `DatabaseConnection(db_path)` recebe o path apenas via `MainWindow` (caminho fixo). Risco baixo enquanto não houver feature de "abrir banco em path arbitrário" (US-15 export pode reintroduzir o vetor — avaliar no `/specify` da feature).
+
+DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o modelo de ameaças (single-user, offline, sem network), mas três são Médias com flag ⚠️ por representarem armadilhas latentes.
+
+### DT-038 — ⚠️ Ausência de limite de tamanho em `Task.descricao` e `KanbanColumn.nome`
+
+- [ ] **Prioridade:** Média
+- **Tipo:** Vulnerabilidade (validação de entrada) / Bug
+- **Descrição:** Identificado em revisão de segurança 2026-04-25. `Task.__post_init__` valida `titulo` contra `TITULO_MAX_LEN`, mas `descricao` aceita string de tamanho arbitrário. Idem para `KanbanColumn.nome`. Em app local single-user o risco de DoS é teórico, mas:
+  1. Permite que o usuário cole acidentalmente um arquivo grande (megabytes) em campo livre de UI e infle o `data.db` — degradando RNF-02 (10k tarefas sem degradação).
+  2. UI (`task_form.py`) não impõe `maxLength` no `QTextEdit` da descrição (em contraste com o `QLineEdit` do título que já tem maxlength 200).
+  3. Quebra simetria do contrato: validação só em um campo é fácil de esquecer ao adicionar novos.
+- **Solução:** adicionar `DESCRICAO_MAX_LEN = 5000` (ou similar) e `NOME_COLUNA_MAX_LEN = 100` em `utils/constants.py`; validar em `__post_init__` de `Task` e `KanbanColumn`; impor `maxLength` correspondente nos widgets `task_form.py`, `inline_task_form.py` e formulários de coluna Kanban (US-11).
+- **Localização:**
+  - `src/own_board_list/utils/constants.py` (novas constantes)
+  - `src/own_board_list/models/task.py` (`__post_init__`)
+  - `src/own_board_list/models/kanban_column.py` (`__post_init__`)
+  - `src/own_board_list/ui/todo/task_form.py` (UI guard)
+  - `src/own_board_list/ui/kanban/inline_task_form.py` (UI guard)
+- **Critérios de aceite:**
+  - [ ] Constantes `DESCRICAO_MAX_LEN` e `NOME_COLUNA_MAX_LEN` definidas
+  - [ ] `Task.__post_init__` rejeita `descricao` acima do limite (`ValueError`)
+  - [ ] `KanbanColumn.__post_init__` rejeita `nome` acima do limite
+  - [ ] UI impede digitação acima dos limites (não só backend)
+  - [ ] Testes de borda: limite-1, limite, limite+1
+- **Caminho SDD:** escape hatch (DT catalogada, ≤ 2h) → `/implement` direto via `dev-python`.
+
+### DT-039 — ⚠️ `posicao_kanban` aceita valores negativos
+
+- [ ] **Prioridade:** Baixa
+- **Tipo:** Bug / Validação de entrada
+- **Descrição:** `Task.posicao_kanban: int = 0` e `KanbanColumn.posicao: int = 0` não validam `>= 0` em `__post_init__`. O contrato implícito do Kanban é que posição é índice não-negativo. Hoje nada produz negativo, mas `update_task(posicao_kanban=-1)` passa direto até o banco. Quebra invariantes silenciosamente.
+- **Solução:** adicionar validação `if self.posicao_kanban < 0: raise ValueError(...)` em `__post_init__` de ambos os modelos. Idem para `posicao` em `KanbanColumn`.
+- **Localização:**
+  - `src/own_board_list/models/task.py`
+  - `src/own_board_list/models/kanban_column.py`
+- **Critérios de aceite:**
+  - [ ] Validação `>= 0` em ambos os modelos
+  - [ ] Teste de unidade cobrindo o cenário negativo
+- **Caminho SDD:** escape hatch → `/implement` direto via `dev-python`.
+
+### DT-040 — ⚠️ Schema SQLite sem `NOT NULL` nem `CHECK` em campos críticos
+
+- [ ] **Prioridade:** Média
+- **Tipo:** Vulnerabilidade (integridade de dados)
+- **Descrição:** Identificado em revisão de segurança 2026-04-25. `migrations.py` cria as tabelas com a maioria dos campos como `TEXT` nullable, sem constraints:
+  - `prioridade TEXT` (deveria ser NOT NULL CHECK IN ('BAIXA','MEDIA','ALTA'))
+  - `status TEXT` (deveria ser NOT NULL CHECK IN ('PENDENTE','CONCLUIDA'))
+  - `coluna_kanban TEXT` (deveria ser NOT NULL)
+  - `criado_em TEXT`, `atualizado_em TEXT` (deveriam ser NOT NULL)
+  - `kanban_columns.criado_em TEXT` idem
+  
+  O modelo Python valida em `__post_init__`, mas o banco aceita estados inválidos se manipulado por fora (ex.: ferramenta externa, importação futura, bug de regressão). Defesa em profundidade exige validação em ambas as camadas.
+  
+  Exige migração — primeira do projeto. Considerar `ALTER TABLE` sequencial ou `CREATE TABLE … AS SELECT` + rename. Cruzar com DT-013 (FK coluna_kanban) para fazer ambas em uma migração única.
+- **Solução:** criar `migrations/002_constraints.sql` (ou função em `migrations.py` versionada) que adiciona NOT NULL + CHECK. Documentar política de versionamento de schema (ainda inexistente).
+- **Localização:**
+  - `src/own_board_list/database/migrations.py` (refatorar para suportar versões)
+  - Possível ADR novo: política de migrations
+- **Critérios de aceite:**
+  - [ ] Política de versionamento de schema definida (tabela `schema_version` ou similar)
+  - [ ] Migração aplica NOT NULL + CHECK em campos enum
+  - [ ] Rollback documentado (backup do `data.db` antes de migrar)
+  - [ ] Testes garantem que dados legacy ainda carregam
+- **Caminho SDD:** **NÃO trivial** — exige `/specify` (decisão de design sobre migrations) → `po` para definir critério de aceite + `tl-python` para ADR de política de migrations. Cruzar com DT-013.
+
+### DT-041 — ⚠️ `check_same_thread=False` sem lock explícito
+
+- [ ] **Prioridade:** Baixa
+- **Tipo:** Vulnerabilidade (race condition latente)
+- **Descrição:** `DatabaseConnection.get_connection` chama `sqlite3.connect(..., check_same_thread=False)`. Hoje a aplicação é single-threaded (loop Qt único), então não há race. Porém, o flag desabilita o guard nativo do `sqlite3` — qualquer feature futura que use `QThread` ou `concurrent.futures` (ex.: exportação assíncrona da US-15, importação em background) introduzirá race conditions silenciosas em `commit`/`rollback`.
+- **Solução:** documentar invariante "conexão usada apenas no thread principal" em docstring; adicionar `assert threading.get_ident() == self._owner_thread` opcional em modo debug; ou trocar para `check_same_thread=True` (default) e revisar testes — a maioria dos repos é single-thread mesmo. Alternativa: encapsular acesso em `Lock` se houver necessidade de threads.
+- **Localização:** `src/own_board_list/database/connection.py:46`
+- **Critérios de aceite:**
+  - [ ] Decisão registrada (manter `False` com guard / voltar a `True`)
+  - [ ] Documentação explícita do contrato
+  - [ ] Teste cobrindo o caminho escolhido
+- **Caminho SDD:** escape hatch (DT catalogada, ≤ 1h decisão + implementação) → `/implement` via `dev-python`. Se decidir mudar contrato, escalar para SRE.
+
+### DT-042 — Validação semântica de `coluna_kanban` em `Task` (referencial soft)
+
+- [ ] **Prioridade:** Baixa
+- **Tipo:** Refactor / Validação
+- **Descrição:** `Task.coluna_kanban` é string livre. `TaskService.create_task`, `update_task`, `move_to_column` não verificam se a coluna informada existe na tabela `kanban_columns`. Resultado: é possível criar tarefa em coluna inexistente, que ficará "órfã" e invisível no Kanban (mas aparece na Todo List). Já parcialmente coberto por DT-013 (mudar para FK), mas DT-013 é refatoração maior; este item é a guarda mínima imediata: validar no `TaskService`.
+- **Solução:** `TaskService` consulta `column_repo.get_all()` (cacheável) e levanta `ValueError` se a coluna não existir, em `create_task`, `create_task_in_column`, `update_task` (quando `coluna_kanban` está em kwargs) e `move_to_column`.
+- **Localização:** `src/own_board_list/services/task_service.py`
+- **Critérios de aceite:**
+  - [ ] Tentativa de criar/mover task para coluna inexistente levanta `ValueError`
+  - [ ] Mensagem de erro orienta o usuário
+  - [ ] Testes de unidade cobrem os 4 métodos
+  - [ ] Marca como precursor de DT-013 (FK real)
+- **Caminho SDD:** escape hatch → `/implement` direto via `dev-python`.
+
+---
+
 ## Resumo por Prioridade (Dívidas Técnicas)
 
 | Prioridade | Tasks | IDs |
 |-----------|-------|-----|
 | **Alta** | 6 | DT-001, DT-002, DT-003, DT-004, DT-021, DT-022 |
-| **Média** | 15 | DT-005 a DT-010, DT-012 a DT-014, DT-016, DT-026, DT-029, DT-031, DT-033 |
-| **Baixa** | 15 | DT-011, DT-015, DT-017 a DT-020, DT-024, DT-025, DT-027, DT-028, DT-030, DT-032, DT-034, DT-035, DT-036, DT-037 |
+| **Média** | 17 | DT-005 a DT-010, DT-012 a DT-014, DT-016, DT-026, DT-029, DT-031, DT-033, DT-038 ⚠️, DT-040 ⚠️ |
+| **Baixa** | 18 | DT-011, DT-015, DT-017 a DT-020, DT-024, DT-025, DT-027, DT-028, DT-030, DT-032, DT-034, DT-035, DT-036, DT-037, DT-039 ⚠️, DT-041 ⚠️, DT-042 |
 | **Alinhamento** | 1 | DT-023 (exige decisão do PO) |
 
 ---
