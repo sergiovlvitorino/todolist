@@ -1605,13 +1605,28 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ---
 
+### DT-043 — Vazamento de quarentena dos testes para `~/.own-board-list/`
+
+- [x] **Prioridade:** Baixa
+- **Tipo:** Bug / Higiene de testes
+- **Descrição:** O benchmark `tests/test_integration/test_migration_slow.py` (TASK-066) chama `MigrationService.executar()` sem isolar `QUARENTENA_DIR`. Como 10% das 10 000 tarefas têm `prioridade=NULL`, cada execução do teste grava ~1 000 entradas em `~/.own-board-list/quarantine_YYYYMMDD.json` (diretório real do usuário). Em ~6 execuções de desenvolvimento o arquivo cresceu para 10 MB / 18 000 linhas. Os demais testes de migração em `tests/test_database/test_migrations.py` já isolavam corretamente via `monkeypatch.setattr(quarantine_mod, "QUARENTENA_DIR", tmp_path)`.
+- **Solução aplicada:** fixture `_isolar_quarentena` (autouse) em `test_migration_slow.py` redirecionando `QUARENTENA_DIR` para `tmp_path / "quarentena"`.
+- **Localização:** `tests/test_integration/test_migration_slow.py`
+- **Critérios de aceite:**
+  - [x] Fixture autouse aplica monkeypatch de `QUARENTENA_DIR` antes de cada teste
+  - [x] `pytest -m slow` não modifica `~/.own-board-list/` em nenhuma execução
+  - [x] Gates verdes
+- **Caminho SDD:** escape hatch → `/implement` direto via `dev-python`.
+
+---
+
 ## Resumo por Prioridade (Dívidas Técnicas)
 
 | Prioridade | Tasks | IDs |
 |-----------|-------|-----|
 | **Alta** | 6 | DT-001, DT-002, DT-003, DT-004, DT-021, DT-022 |
 | **Média** | 15 | DT-005 a DT-010, DT-012, DT-014, DT-016, DT-026, DT-029, DT-031, DT-033, DT-038 ⚠️ (DT-013 ✅ DT-040 ✅ concluídas 2026-04-25) |
-| **Baixa** | 18 | DT-011, DT-015, DT-017 a DT-020, DT-024, DT-025, DT-027, DT-028, DT-030, DT-032, DT-034, DT-035, DT-036, DT-037, DT-039 ⚠️, DT-041 ⚠️, DT-042 |
+| **Baixa** | 19 | DT-011, DT-015, DT-017 a DT-020, DT-024, DT-025, DT-027, DT-028, DT-030, DT-032, DT-034, DT-035, DT-036, DT-037, DT-039 ⚠️, DT-041 ⚠️, DT-042, DT-043 ✅ |
 | **Alinhamento** | 1 | DT-023 (exige decisão do PO) |
 
 ---

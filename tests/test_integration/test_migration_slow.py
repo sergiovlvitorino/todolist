@@ -140,6 +140,20 @@ def _popular_tarefas_legado(conn: sqlite3.Connection, n: int) -> None:
     conn.commit()
 
 
+@pytest.fixture(autouse=True)
+def _isolar_quarentena(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Generator[None, None, None]:
+    # 10% das tarefas têm prioridade=NULL → migration grava ~1000 registros em
+    # quarentena por teste. Sem isolamento, o caminho global QUARENTENA_DIR
+    # (~/.own-board-list/) acumula MBs de dados de teste no diretório real do
+    # usuário (DT-043).
+    from own_board_list.database import quarantine as quarantine_mod
+
+    monkeypatch.setattr(quarantine_mod, "QUARENTENA_DIR", tmp_path / "quarentena")
+    yield
+
+
 @pytest.fixture()
 def db_legado_10k(tmp_path: Path) -> Generator[Path, None, None]:
     """Banco legado v1 em arquivo temporário com 10 000 tarefas pré-populadas.
