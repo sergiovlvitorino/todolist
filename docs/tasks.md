@@ -1424,7 +1424,7 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
 
 ### DT-033 — Convenções de testes Qt em ambiente headless (BUG-QA-001 e BUG-QA-002)
 
-- [ ] **Prioridade:** Média
+- [x] **Prioridade:** Média
 - **Esforço:** P
 - **Descrição:** QA identificou durante a US-07 duas armadilhas em testes pytest-qt sob XCB headless: (1) `QWidget.isVisible()` retorna `False` quando o widget raiz não foi exibido via `show()`, mesmo que o widget filho esteja logicamente visível. Usar `QWidget.isHidden()` como inverso não-equivalente resolve; (2) `qtbot.keyClicks(widget, ...)` causa SIGABRT se o widget alvo não foi exibido — workaround é usar `widget.setText(...)` diretamente. Essas duas armadilhas vão reaparecer em qualquer teste futuro de UI que não entende a nuance. Ação: documentar convenção única e reutilizável em `tests/README.md` ou docstring de `conftest.py` raiz, e revisar se algum lint/check automatizado (ex.: grep de `isVisible()`/`keyClicks` nos testes) ajuda a prevenir reincidência.
 - **Localização:**
@@ -1432,10 +1432,10 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
   - `tests/test_integration/test_fluxo_busca.py` (helper `_aplicar_busca`)
   - `tests/test_integration/test_performance_busca.py` (assert de label vazio)
 - **Critérios de aceite:**
-  - [ ] Convenção documentada (arquivo único, localização canônica)
-  - [ ] Template de fixture/helper para "widget visible headless" centralizado
-  - [ ] Zero uso de `qtbot.keyClicks` sem `widget.show()` nos testes existentes
-  - [ ] Zero uso de `isVisible()` como negação de `isHidden()` quando o widget raiz não está visível
+  - [x] Convenção documentada (arquivo único, localização canônica)
+  - [x] Template de fixture/helper para "widget visible headless" centralizado
+  - [x] Zero uso de `qtbot.keyClicks` sem `widget.show()` nos testes existentes
+  - [x] Zero uso de `isVisible()` como negação de `isHidden()` quando o widget raiz não está visível
 
 ---
 
