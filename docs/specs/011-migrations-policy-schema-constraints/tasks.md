@@ -46,7 +46,7 @@
 | 16 | TASK-062 | Testes de migração — fixtures de bancos legados (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura) | testes | M | TASK-058 | TC-094..TC-099 |
 | 17 | TASK-063 | Testes de constraints SQL diretas (insert cru com violação) e `foreign_key_check` | testes | P | TASK-055 | TC-102, TC-103 |
 | 18 | TASK-064 | Testes de backup/quarentena (rotação 3, escrita append-only, payload preservado) | testes | P | TASK-050, TASK-051 | TC-101, TC-095..TC-098 |
-| 19 | TASK-065 | Testes de UI do splash (progresso > 1,5 s, exibição de quarentena, erro com caminho do backup) | testes | P | TASK-060 | TC-104, TC-105, TC-106 |
+| 19 | TASK-065 | Testes de UI do splash (progresso > 1,5 s, exibição de quarentena, erro com caminho do backup) | testes | P | TASK-060 | TC-104, TC-105, TC-106 | ✅ |
 | 20 | TASK-066 | Benchmark `pytest.mark.slow`: migração de 10 000 tarefas conclui em ≤ 3 s | testes | P | TASK-058 | TC-107 |
 | 21 | TASK-067 | Atualizar `docs/plano-testes.md` (adicionar TC-093..TC-108) e `docs/funcionalidades.md`/`CHANGELOG.md` (DT-040 + DT-013 fechadas) | docs | P | TASK-066 | — |
 

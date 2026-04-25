@@ -2029,6 +2029,78 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 > TCs desta seção cobrem a feature de política de migrations e constraints de integridade do schema (spec 011-migrations-policy-schema-constraints). Adicionados em TASK-061/TASK-067.
 > **Nota:** Os números TC-093..TC-094 foram previamente usados por US-10 neste plano. Os TCs de migrations são registrados com seus IDs canônicos (conforme plan.md da spec 011) e estão implementados nos arquivos de teste correspondentes.
 
+#### TC-104 — Indicador de progresso condicional no MigrationSplash (TASK-065)
+
+**Objetivo:** Confirmar que o indicador de progresso (barra indeterminada) do `MigrationSplash` permanece oculto enquanto `show_progress()` não for chamado, e fica visível somente após essa chamada. Valida também que a barra é ocultada ao transitar para modo quarentena ou modo erro.
+
+**Arquivo de teste:** `tests/test_ui/test_splash.py` — classe `TestTC104ProgressoCondicional`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Pré-condição | Ação | Resultado esperado |
+|---|---|---|---|
+| TC-104a | splash exibido (sem show_progress) | inspecionar `progresso_visivel` | `False` |
+| TC-104b | splash exibido | chamar `show_progress("Migrando…")` | `progresso_visivel == True` |
+| TC-104c | splash exibido | chamar `show_progress(msg)` | `_lbl_status.text() == msg` e não-oculto |
+| TC-104d | splash exibido | inspecionar `limiar_progresso_s` | igual a `LIMIAR_PROGRESSO_MIGRACAO_S` (1,5) |
+| TC-104e | splash exibido | inspecionar todos os painéis | progresso, quarentena e erro ocultos |
+| TC-104f | show_progress ativo | chamar `show_quarantine_path(...)` | `progresso_visivel == False` |
+| TC-104g | show_progress ativo | chamar `show_error(...)` | `progresso_visivel == False` |
+
+**Critérios de aceite:** 7 subcasos verdes; gates ruff + mypy verdes.
+
+**Resultado (2026-04-25):** PASS — 7 testes verdes.
+
+---
+
+#### TC-105 — Exibição do caminho de quarentena no MigrationSplash (TASK-065)
+
+**Objetivo:** Confirmar que `show_quarantine_path(caminho)` exibe o painel de quarentena com o título e o caminho do arquivo corretamente, sem ativar o painel de erro nem a barra de progresso.
+
+**Arquivo de teste:** `tests/test_ui/test_splash.py` — classe `TestTC105Quarentena`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Ação | Resultado esperado |
+|---|---|---|
+| TC-105a | `show_quarantine_path(caminho)` | `quarentena_visivel == True` |
+| TC-105b | `show_quarantine_path(caminho)` | `caminho_quarentena_exibido == str(caminho)` |
+| TC-105c | `show_quarantine_path(caminho)` | `_lbl_quarentena_titulo` não-oculto |
+| TC-105d | `show_quarantine_path(caminho)` | `_lbl_quarentena_caminho` não-oculto |
+| TC-105e | `show_quarantine_path(caminho)` | `erro_visivel == False` |
+| TC-105f | `show_quarantine_path(tmp_path/...)` | caminho de `tmp_path` exibido corretamente |
+
+**Critérios de aceite:** 6 subcasos verdes; gates ruff + mypy verdes.
+
+**Resultado (2026-04-25):** PASS — 6 testes verdes.
+
+---
+
+#### TC-106 — Modo erro do MigrationSplash: mensagem, backup e botão Fechar (TASK-065)
+
+**Objetivo:** Confirmar que `show_error(mensagem, backup_path)` exibe o painel de erro com a mensagem correta, o caminho do backup (quando fornecido), as instruções de recuperação e o botão "Fechar". Valida também que o botão fecha o widget e que o painel de backup fica oculto quando `backup_path=None`.
+
+**Arquivo de teste:** `tests/test_ui/test_splash.py` — classe `TestTC106Erro`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Ação | Resultado esperado |
+|---|---|---|
+| TC-106a | `show_error(msg, None)` | `erro_visivel == True` |
+| TC-106b | `show_error(msg, None)` | `_lbl_erro_mensagem.text() == msg` e não-oculto |
+| TC-106c | antes e após `show_error` | `_btn_fechar` oculto antes, visível após |
+| TC-106d | `show_error(msg, backup_path)` | `caminho_backup_exibido == str(backup_path)` e `_lbl_backup_caminho` não-oculto |
+| TC-106e | `show_error(msg, None)` | `_lbl_backup_caminho` e `_lbl_backup_titulo` ocultos |
+| TC-106f | `show_error(msg, None)` | `_lbl_instrucoes` não-oculto |
+| TC-106g | `show_error(msg, None)` | `quarentena_visivel == False` |
+| TC-106h | clicar em `_btn_fechar` | splash fecha (`isVisible() == False`) |
+
+**Critérios de aceite:** 8 subcasos verdes; gates ruff + mypy verdes.
+
+**Resultado (2026-04-25):** PASS — 8 testes verdes.
+
+---
+
 #### TC-108 — Defesa em profundidade: domínio×schema (TASK-061)
 
 **Objetivo:** Confirmar que tanto o domínio (`Task.__post_init__`, `KanbanColumn.__post_init__`) quanto o schema SQL (constraints CHECK/NOT NULL/FK da migration v1→v2) rejeitam o mesmo conjunto de estados inválidos, independentemente do caminho de entrada.

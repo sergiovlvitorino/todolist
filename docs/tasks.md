@@ -1786,8 +1786,8 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-064 — Testes de backup/quarentena
 **Descrição:** rotação 3, escrita append-only, payload original preservado. **Camada:** testes. **Esforço:** P. **Depende:** TASK-050, TASK-051. **TC aceite:** TC-101, TC-095..TC-098.
 
-### TASK-065 — Testes UI do splash
-**Descrição:** progresso > 1,5 s, exibição de quarentena, erro com caminho de backup. **Camada:** testes. **Esforço:** P. **Depende:** TASK-060. **TC aceite:** TC-104, TC-105, TC-106.
+### TASK-065 — Testes UI do splash ✅
+**Descrição:** progresso > 1,5 s, exibição de quarentena, erro com caminho de backup. **Camada:** testes. **Esforço:** P. **Depende:** TASK-060. **TC aceite:** TC-104, TC-105, TC-106. **Resultado (2026-04-25):** 21 testes verdes em `tests/test_ui/test_splash.py`.
 
 ### TASK-066 — Benchmark de migração
 **Descrição:** `pytest.mark.slow` migrando 10 000 tarefas em ≤ 3 s. **Camada:** testes. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-107.
