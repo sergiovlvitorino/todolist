@@ -1299,9 +1299,9 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
   - `src/own_board_list/utils/constants.py` (linha 34)
   - Possíveis consumidores: `src/own_board_list/models/task.py`, `src/own_board_list/ui/todo/task_form.py`
 - **Critérios de aceite:**
-  - [ ] `TITULO_MAX_LEN` utilizada na validação de título em `Task.__post_init__` (ou equivalente)
-  - [ ] `TITULO_MAX_LEN` aplicada como `maxLength` no `QLineEdit` de título do `TaskForm`
-  - [ ] Teste que comprova rejeição de título com tamanho > `TITULO_MAX_LEN`
+  - [x] `TITULO_MAX_LEN` utilizada na validação de título em `Task.__post_init__` (ou equivalente)
+  - [x] `TITULO_MAX_LEN` aplicada como `maxLength` no `QLineEdit` de título do `TaskForm`
+  - [x] Teste que comprova rejeição de título com tamanho > `TITULO_MAX_LEN`
 
 ---
 
