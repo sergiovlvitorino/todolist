@@ -2172,6 +2172,71 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 
 ---
 
+#### TC-102 — Constraints SQL ativas: INSERT direto com violação via banco migrado (TASK-063)
+
+| Campo | Valor |
+|-------|-------|
+| **Tipo** | Integração |
+| **Arquivo** | `tests/test_database/test_sql_constraints.py` |
+| **Pré-condições** | Banco legado v1 migrado para v2 via `initialize_database`; `PRAGMA foreign_keys=ON` ativo |
+
+**Objetivo:** Verificar que o schema v2 resultante da migration real (não DDL inline) rejeita via `sqlite3.IntegrityError` todos os estados inválidos via INSERT cru.
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Cenário | Resultado esperado |
+|---|---|---|
+| TC-102a | `titulo=NULL` | `IntegrityError` (NOT NULL) |
+| TC-102a | `prioridade=NULL` | `IntegrityError` (NOT NULL) |
+| TC-102a | `status=NULL` | `IntegrityError` (NOT NULL) |
+| TC-102a | `criado_em=NULL` | `IntegrityError` (NOT NULL) |
+| TC-102a | `atualizado_em=NULL` | `IntegrityError` (NOT NULL) |
+| TC-102a | `nome=NULL` em kanban_columns | `IntegrityError` (NOT NULL) |
+| TC-102a | `criado_em=NULL` em kanban_columns | `IntegrityError` (NOT NULL) |
+| TC-102b | `status='Arquivada'` (e outros 5 valores fora do enum) | `IntegrityError` (CHECK) |
+| TC-102b | `status='Pendente'` e `status='Concluída'` | aceitos (smoke positivo) |
+| TC-102c | `prioridade='Urgente'` (e outros 5 fora do enum) | `IntegrityError` (CHECK) |
+| TC-102c | `prioridade='Baixa'`, `'Média'`, `'Alta'` | aceitos (smoke positivo) |
+| TC-102d | `posicao_kanban=-1` | `IntegrityError` (CHECK >= 0) |
+| TC-102d | `posicao_kanban=0` | aceito |
+| TC-102d | `posicao=-1` em kanban_columns | `IntegrityError` (CHECK >= 0) |
+| TC-102e | `titulo=''` | `IntegrityError` (CHECK trim) |
+| TC-102e | `titulo='   '` | `IntegrityError` (CHECK trim) |
+| TC-102f | `coluna_kanban` com ID inexistente | `IntegrityError` (FK REFERENCES) |
+| TC-102f | task com coluna existente | aceita |
+
+**Critérios de aceite:** 37 testes verdes.
+
+**Resultado (2026-04-25):** PASS — 37 testes verdes.
+
+---
+
+#### TC-103 — `PRAGMA foreign_key_check` retorna vazio após migration (TASK-063)
+
+| Campo | Valor |
+|-------|-------|
+| **Tipo** | Integração |
+| **Arquivo** | `tests/test_database/test_sql_constraints.py` (classe `TestPragmaForeignKeyCheck`) |
+| **Pré-condições** | Banco legado v1 migrado para v2; `PRAGMA foreign_keys=ON` ativo |
+
+**Objetivo:** Garantir que `PRAGMA foreign_key_check` retorna resultado vazio (sem violações) após migration v1→v2 em todos os cenários: banco recém-migrado, após insert válido, após tentativa rejeitada de violação, e para tabela `tasks` especificamente. Complementa TC-102 confirmando integridade referencial pós-migration.
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Cenário | Resultado esperado |
+|---|---|---|
+| TC-103a | Banco recém-migrado sem dados extras | `PRAGMA foreign_key_check` retorna `[]` |
+| TC-103b | Após insert de task válida | `PRAGMA foreign_key_check` retorna `[]` |
+| TC-103c | Após tentativa rejeitada de FK violation | banco permanece íntegro; `[]` |
+| TC-103d | `PRAGMA foreign_key_check(tasks)` com dados válidos | retorna `[]` |
+| TC-103e | FK OFF → injetar task órfã → FK ON | `PRAGMA foreign_key_check` detecta ≥ 1 violação (valida eficácia do PRAGMA) |
+
+**Critérios de aceite:** Inclusos nos 37 testes verdes de TC-102 (mesma suíte).
+
+**Resultado (2026-04-25):** PASS — 5 subcasos verdes (classes `TestPragmaForeignKeyCheck`).
+
+---
+
 #### TC-108 — Defesa em profundidade: domínio×schema (TASK-061)
 
 **Objetivo:** Confirmar que tanto o domínio (`Task.__post_init__`, `KanbanColumn.__post_init__`) quanto o schema SQL (constraints CHECK/NOT NULL/FK da migration v1→v2) rejeitam o mesmo conjunto de estados inválidos, independentemente do caminho de entrada.
