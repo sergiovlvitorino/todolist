@@ -68,6 +68,21 @@ class TestTaskCreation:
         task = Task(titulo="Título OK", descricao=descricao)
         assert len(task.descricao) == DESCRICAO_MAX_LEN - 1
 
+    def test_posicao_kanban_negativa_lanca_value_error(self) -> None:
+        """Deve lançar ValueError quando posicao_kanban é negativa."""
+        with pytest.raises(ValueError, match="posição Kanban"):
+            Task(titulo="Título OK", posicao_kanban=-1)
+
+    def test_posicao_kanban_zero_e_valida(self) -> None:
+        """Deve aceitar posicao_kanban igual a zero."""
+        task = Task(titulo="Título OK", posicao_kanban=0)
+        assert task.posicao_kanban == 0
+
+    def test_posicao_kanban_positiva_e_valida(self) -> None:
+        """Deve aceitar posicao_kanban maior que zero."""
+        task = Task(titulo="Título OK", posicao_kanban=10)
+        assert task.posicao_kanban == 10
+
     def test_criacao_com_todos_os_campos(self) -> None:
         """Deve criar uma tarefa com todos os campos preenchidos."""
         vencimento = date(2025, 12, 31)

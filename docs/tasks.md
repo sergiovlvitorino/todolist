@@ -1343,25 +1343,25 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
 
 ### DT-027 — Gap de cobertura em `column_repository.py` (linhas 34 e 106)
 
-- [ ] **Prioridade:** Baixa
+- [x] **Prioridade:** Baixa
 - **Esforço:** P
 - **Descrição:** Relatório de cobertura (`pytest --cov`) mostra que `column_repository.py` tem 96% de cobertura com as linhas 34 e 106 não exercitadas. São branches de tratamento de erro / caminhos alternativos que precisam de teste explícito.
 - **Localização:** `src/own_board_list/database/column_repository.py` (linhas 34, 106)
 - **Critérios de aceite:**
-  - [ ] Testes que exercitam especificamente os caminhos das linhas 34 e 106
-  - [ ] Cobertura de `column_repository.py` >= 99%
+  - [x] Testes que exercitam especificamente os caminhos das linhas 34 e 106
+  - [x] Cobertura de `column_repository.py` >= 99% (atual: 100%)
 
 ---
 
 ### DT-028 — Gap de cobertura em `task_service.py` (linha 140)
 
-- [ ] **Prioridade:** Baixa
+- [x] **Prioridade:** Baixa
 - **Esforço:** P
 - **Descrição:** Relatório de cobertura mostra que `task_service.py` tem 99% com a linha 140 não exercitada (branch de tratamento de exceção ou caso limite). (Observação: usuário reportou "linha 134" ao abrir a task, mas a linha real ausente no relatório de cobertura do ciclo 2026-04-19 é a 140 — verificar no momento de implementar.)
 - **Localização:** `src/own_board_list/services/task_service.py` (linha 140)
 - **Critérios de aceite:**
-  - [ ] Teste que exercita a linha 140
-  - [ ] Cobertura de `task_service.py` = 100%
+  - [x] Teste que exercita a linha 140
+  - [x] Cobertura de `task_service.py` = 100% (confirmado)
 
 ---
 
@@ -1387,10 +1387,10 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
 - **Descrição:** `src/own_board_list/main.py` (14 statements, linhas 3-26) não tem nenhum teste. É o entrypoint que cria `QApplication`, instancia `MainWindow` e chama `app.exec()`. Testar `main()` end-to-end via `qtbot` é possível, mas tem custo: bootar app completo no CI. Alternativa mais barata: extrair `create_app()` e testar apenas a fiação de dependências, deixando `app.exec()` como `pragma: no cover`.
 - **Localização:** `src/own_board_list/main.py`
 - **Critérios de aceite:**
-  - [ ] `create_app()` ou função equivalente extraída com dependências injetáveis
-  - [ ] Teste que verifica a fiação de dependências (conexão, repositórios, serviço, janela principal)
-  - [ ] `app.exec()` marcado com `# pragma: no cover`
-  - [ ] Cobertura de `main.py` >= 85%
+  - [x] `create_app()` ou função equivalente extraída com dependências injetáveis
+  - [x] Teste que verifica a fiação de dependências (conexão, repositórios, serviço, janela principal)
+  - [x] `app.exec()` marcado com `# pragma: no cover`
+  - [x] Cobertura de `main.py` >= 85% (atual: 100%)
 
 ---
 
@@ -1536,7 +1536,7 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ### DT-039 — ⚠️ `posicao_kanban` aceita valores negativos
 
-- [ ] **Prioridade:** Baixa
+- [x] **Prioridade:** Baixa
 - **Tipo:** Bug / Validação de entrada
 - **Descrição:** `Task.posicao_kanban: int = 0` e `KanbanColumn.posicao: int = 0` não validam `>= 0` em `__post_init__`. O contrato implícito do Kanban é que posição é índice não-negativo. Hoje nada produz negativo, mas `update_task(posicao_kanban=-1)` passa direto até o banco. Quebra invariantes silenciosamente.
 - **Solução:** adicionar validação `if self.posicao_kanban < 0: raise ValueError(...)` em `__post_init__` de ambos os modelos. Idem para `posicao` em `KanbanColumn`.

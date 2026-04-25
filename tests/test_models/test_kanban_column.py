@@ -73,6 +73,21 @@ class TestKanbanColumnValidacao:
         col = KanbanColumn(nome=nome)
         assert len(col.nome) == NOME_COLUNA_MAX_LEN - 1
 
+    def test_posicao_negativa_levanta_value_error(self) -> None:
+        """Deve levantar ValueError quando posicao é negativa."""
+        with pytest.raises(ValueError, match="posição da coluna"):
+            KanbanColumn(nome="Col Válida", posicao=-1)
+
+    def test_posicao_zero_e_valida(self) -> None:
+        """Deve aceitar posicao igual a zero."""
+        col = KanbanColumn(nome="Col Válida", posicao=0)
+        assert col.posicao == 0
+
+    def test_posicao_positiva_e_valida(self) -> None:
+        """Deve aceitar posicao maior que zero."""
+        col = KanbanColumn(nome="Col Válida", posicao=5)
+        assert col.posicao == 5
+
 
 class TestKanbanColumnToDict:
     """Testes da serialização to_dict."""

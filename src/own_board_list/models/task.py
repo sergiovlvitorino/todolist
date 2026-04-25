@@ -64,6 +64,10 @@ class Task:
                 f"A descrição deve ter no máximo {DESCRICAO_MAX_LEN} caracteres, "
                 f"mas tem {len(self.descricao)}."
             )
+        if self.posicao_kanban < 0:
+            raise ValueError(
+                f"A posição Kanban deve ser >= 0, mas recebeu {self.posicao_kanban}."
+            )
 
     def touch(self) -> None:
         """Atualiza o timestamp de modificação para o momento atual (UTC)."""

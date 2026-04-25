@@ -36,6 +36,10 @@ class KanbanColumn:
                 f"{NOME_COLUNA_MAX_LEN} caracteres, "
                 f"mas tem {len(self.nome)}."
             )
+        if self.posicao < 0:
+            raise ValueError(
+                f"A posição da coluna deve ser >= 0, mas recebeu {self.posicao}."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Serializa a coluna para um dicionário."""
