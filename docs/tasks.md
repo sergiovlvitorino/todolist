@@ -551,7 +551,8 @@ Rodar suíte completa de testes com cobertura (`pytest --cov`). Alvo: >= 80% de 
 | **Fase 3 — Could Have** | TASK-026 a TASK-028 | 1M + 2G = ~26h |
 | **US-07 (incremento Fase 2)** | TASK-029 a TASK-036 | 6P + 2M = ~18–24h |
 | **US-10 (incremento Fase 2)** | TASK-037 a TASK-046 | 7P + 3M = ~20–26h |
-| **Total** | 36 tasks | ~156–162h |
+| **DT-040 + DT-013 (migrations & constraints)** | TASK-047 a TASK-067 | 13P + 8M = ~42–74h |
+| **Total** | 57 tasks | ~198–236h |
 
 ---
 
@@ -1724,6 +1725,81 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 **Ordem topológica:** TASK-037 → TASK-038 → (TASK-043 ∥ TASK-039) → TASK-040 → TASK-041 → TASK-042 → (TASK-044 ∥ TASK-045 ∥ TASK-046).
 
 **Rollback:** feature aditiva, sem migração de dados. Em caso de regressão crítica, reverter commits na ordem inversa (TASK-046 → TASK-037). A refatoração de `_reload_board` (TASK-041) é o único ponto com risco de regressão em telas existentes do Kanban — se necessário, reverter apenas TASK-041 (volta a reload full) mantendo TASK-037/038 disponíveis.
+
+---
+
+## Plano incremental DT-040 + DT-013 (TASK-047 a TASK-067) — Política de migrations e constraints
+
+> Spec/plan/tasks completos em [specs/011-migrations-policy-schema-constraints/](specs/011-migrations-policy-schema-constraints/).
+
+### TASK-047 — ADR-005: Estratégia de versionamento de schema SQLite
+**Descrição:** documentar tabela `schema_version`, lista ordenada de `Migration` idempotentes, atomicidade por migration, backup com rotação fixa e quarentena lateral. **Camada:** docs. **Esforço:** P. **Depende:** —.
+
+### TASK-048 — Constantes de migração em `utils/constants.py`
+**Descrição:** `SCHEMA_VERSION_ATUAL=2`, `LIMIAR_PROGRESSO_MIGRACAO_S=1.5`, `BACKUPS_RETIDOS=3`, `QUARENTENA_DIR=Path.home()/".own-board-list"`. **Camada:** utils. **Esforço:** P. **Depende:** TASK-047. **TC aceite:** TC-093.
+
+### TASK-049 — Tabela `schema_version` + `PRAGMA foreign_keys=ON`
+**Descrição:** criar tabela `schema_version (versao INTEGER PK, aplicada_em TEXT)` em `database/migrations.py`; expor `get_schema_version`/`set_schema_version`; ativar `PRAGMA foreign_keys = ON` em `connection.py`. **Camada:** database. **Esforço:** P. **Depende:** TASK-048. **TC aceite:** TC-093, TC-094.
+
+### TASK-050 — Módulo `database/backup.py`
+**Descrição:** `criar_backup(db_path, versao_origem) -> Path`, `rotacionar_backups(db_path, manter=3)`, `listar_backups(db_path)`. Nome de arquivo `data_backup_vN_YYYYMMDD_HHMMSS.db`. **Camada:** database. **Esforço:** P. **Depende:** TASK-048. **TC aceite:** TC-101.
+
+### TASK-051 — Módulo `database/quarantine.py`
+**Descrição:** `RegistroQuarentena` (dataclass) + `registrar_em_quarentena` com escrita append-only em `~/.own-board-list/quarantine_YYYYMMDD.json`; criação de diretório se ausente. **Camada:** database. **Esforço:** P. **Depende:** TASK-048. **TC aceite:** TC-095..TC-098.
+
+### TASK-052 — Motor de migrations versionado
+**Descrição:** definir `Migration` (dataclass com `versao_destino`, `descricao`, `aplicar`); refatorar `initialize_database` para iterar `MIGRATIONS` por ordem; bootstrap de banco novo (v0→v2 direto) sem backup. **Camada:** database. **Esforço:** M. **Depende:** TASK-049. **TC aceite:** TC-093, TC-094.
+
+### TASK-053 — Saneamento `tasks` (v1→v2)
+**Descrição:** `UPDATE` de `prioridade`, `status`, `coluna_kanban`, `criado_em`, `atualizado_em` com escrita em quarentena para cada linha afetada. **Camada:** database. **Esforço:** M. **Depende:** TASK-051, TASK-052. **TC aceite:** TC-095, TC-096, TC-097, TC-098.
+
+### TASK-054 — Saneamento `kanban_columns` (v1→v2)
+**Descrição:** `UPDATE` de `criado_em` ausente; quarentena. **Camada:** database. **Esforço:** P. **Depende:** TASK-051, TASK-052. **TC aceite:** TC-098.
+
+### TASK-055 — Recriação de tabelas com constraints
+**Descrição:** `CREATE TABLE *_new` com `CHECK`, `NOT NULL`, `FK ON DELETE RESTRICT`; `INSERT INTO *_new SELECT ...`; `DROP`; `RENAME`; recriar índices. **Camada:** database. **Esforço:** M. **Depende:** TASK-053, TASK-054. **TC aceite:** TC-102, TC-103.
+
+### TASK-056 — Validação final + rollback automático
+**Descrição:** após cada migration, `PRAGMA integrity_check` e `PRAGMA foreign_key_check`; falha → `ROLLBACK` da transação + restauração do backup. **Camada:** database. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-100, TC-103.
+
+### TASK-057 — Detecção de versão futura
+**Descrição:** se `versao_origem > SCHEMA_VERSION_ATUAL`, falhar com erro claro sem tocar no arquivo. **Camada:** database. **Esforço:** P. **Depende:** TASK-052. **TC aceite:** TC-099.
+
+### TASK-058 — `MigrationService` orquestrador
+**Descrição:** `services/migration_service.py` com `executar(db_path) -> MigrationReport` orquestrando backup → migrations → validação → rotação → relatório. **Camada:** services. **Esforço:** M. **Depende:** TASK-050, TASK-056, TASK-057. **TC aceite:** TC-094, TC-100.
+
+### TASK-059 — Integrar bootstrap
+**Descrição:** chamar `MigrationService.executar` antes de instanciar a UI; abortar UI se falhar. **Camada:** services. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-094.
+
+### TASK-060 — `MigrationSplash` (UI)
+**Descrição:** `ui/splash.py` com indicador de progresso condicional (> 1,5 s), exibição de caminho de quarentena, modo de erro com caminho do backup. **Camada:** ui. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-104, TC-105, TC-106.
+
+### TASK-061 — Auditoria domínio×schema
+**Descrição:** alinhar mensagens de erro entre validações de `Task`/`KanbanColumn` (DT-038/039/042) e `IntegrityError` do schema. **Camada:** models. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-108.
+
+### TASK-062 — Testes de migração com fixtures legadas
+**Descrição:** fixtures de bancos v1 (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura). **Camada:** testes. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-094..TC-099.
+
+### TASK-063 — Testes de constraints SQL diretas
+**Descrição:** `INSERT` cru com violações; `PRAGMA foreign_key_check` retorna vazio. **Camada:** testes. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-102, TC-103.
+
+### TASK-064 — Testes de backup/quarentena
+**Descrição:** rotação 3, escrita append-only, payload original preservado. **Camada:** testes. **Esforço:** P. **Depende:** TASK-050, TASK-051. **TC aceite:** TC-101, TC-095..TC-098.
+
+### TASK-065 — Testes UI do splash
+**Descrição:** progresso > 1,5 s, exibição de quarentena, erro com caminho de backup. **Camada:** testes. **Esforço:** P. **Depende:** TASK-060. **TC aceite:** TC-104, TC-105, TC-106.
+
+### TASK-066 — Benchmark de migração
+**Descrição:** `pytest.mark.slow` migrando 10 000 tarefas em ≤ 3 s. **Camada:** testes. **Esforço:** P. **Depende:** TASK-058. **TC aceite:** TC-107.
+
+### TASK-067 — Atualizar plano de testes e CHANGELOG
+**Descrição:** registrar TC-093..TC-108 em `plano-testes.md`; nota em `CHANGELOG.md` sobre migração automática + backup; marcar DT-040 e DT-013 como concluídas. **Camada:** docs. **Esforço:** P. **Depende:** TASK-066. **TC aceite:** —.
+
+**Totais DT-040+DT-013:** 21 tasks (13 P + 8 M) ≈ 42–74 h.
+
+**Ordem topológica:** TASK-047 → TASK-048 → (TASK-049 ∥ TASK-050 ∥ TASK-051) → TASK-052 → (TASK-053 ∥ TASK-054 ∥ TASK-057) → TASK-055 → (TASK-056 ∥ TASK-061 ∥ TASK-063) → TASK-058 → (TASK-059 ∥ TASK-060 ∥ TASK-062 ∥ TASK-066) → TASK-064 (após TASK-050+051) → TASK-065 (após TASK-060) → TASK-067.
+
+**Rollback:** schema irreversível; backup automático pré-migração permite recuperação manual. Reversão de código na ordem inversa (TASK-067 → TASK-047). Detalhes em `specs/011-migrations-policy-schema-constraints/tasks.md` §"Plano de rollback".
 
 ---
 
