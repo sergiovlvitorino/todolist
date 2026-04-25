@@ -1314,9 +1314,9 @@ Esta seção rastreia dívidas técnicas identificadas no código já implementa
   - `src/own_board_list/models/task.py` (linha 22)
   - `src/own_board_list/database/task_repository.py` (linha 15)
 - **Critérios de aceite:**
-  - [ ] Função sem prefixo `_` OU movida para `utils/` com nome público
-  - [ ] Todos os importadores atualizados
-  - [ ] Nenhum warning de ruff sobre uso de nome `_private`
+  - [x] Função sem prefixo `_` OU movida para `utils/` com nome público
+  - [x] Todos os importadores atualizados
+  - [x] Nenhum warning de ruff sobre uso de nome `_private`
 
 ---
 
