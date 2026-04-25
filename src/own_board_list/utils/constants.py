@@ -33,6 +33,12 @@ COLUNA_PADRAO = COLUNA_A_FAZER
 #: Comprimento máximo permitido para o título de uma tarefa.
 TITULO_MAX_LEN = 200
 
+#: Comprimento máximo permitido para a descrição de uma tarefa.
+DESCRICAO_MAX_LEN = 5000
+
+#: Comprimento máximo permitido para o nome de uma coluna Kanban.
+NOME_COLUNA_MAX_LEN = 100
+
 # ---------------------------------------------------------------------------
 # Mapeamento de prioridade para cor HTML (usado nos widgets de UI)
 # ---------------------------------------------------------------------------

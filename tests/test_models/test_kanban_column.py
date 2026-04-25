@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import pytest
 
 from own_board_list.models.kanban_column import KanbanColumn
+from own_board_list.utils.constants import NOME_COLUNA_MAX_LEN
 
 
 class TestKanbanColumnCreate:
@@ -53,6 +54,24 @@ class TestKanbanColumnValidacao:
         """Deve levantar ValueError quando o nome contém apenas espaços."""
         with pytest.raises(ValueError, match="nome da coluna não pode ser vazio"):
             KanbanColumn(nome="   ")
+
+    def test_nome_acima_de_100_chars_levanta_value_error(self) -> None:
+        """Deve levantar ValueError quando o nome excede 100 caracteres."""
+        nome_longo = "A" * (NOME_COLUNA_MAX_LEN + 1)
+        with pytest.raises(ValueError, match="nome da coluna"):
+            KanbanColumn(nome=nome_longo)
+
+    def test_nome_com_exatamente_100_chars_e_valido(self) -> None:
+        """Deve aceitar nome com exatamente 100 caracteres (limite)."""
+        nome = "B" * NOME_COLUNA_MAX_LEN
+        col = KanbanColumn(nome=nome)
+        assert len(col.nome) == NOME_COLUNA_MAX_LEN
+
+    def test_nome_com_99_chars_e_valido(self) -> None:
+        """Deve aceitar nome com limite-1 caracteres."""
+        nome = "C" * (NOME_COLUNA_MAX_LEN - 1)
+        col = KanbanColumn(nome=nome)
+        assert len(col.nome) == NOME_COLUNA_MAX_LEN - 1
 
 
 class TestKanbanColumnToDict:

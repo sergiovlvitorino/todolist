@@ -16,7 +16,11 @@ from typing import Any
 
 from own_board_list.models.enums import Prioridade as Prioridade
 from own_board_list.models.enums import StatusTarefa as StatusTarefa
-from own_board_list.utils.constants import COLUNA_PADRAO, TITULO_MAX_LEN
+from own_board_list.utils.constants import (
+    COLUNA_PADRAO,
+    DESCRICAO_MAX_LEN,
+    TITULO_MAX_LEN,
+)
 
 
 def parse_datetime(value: str) -> datetime:
@@ -54,6 +58,11 @@ class Task:
             raise ValueError(
                 f"O título deve ter no máximo {TITULO_MAX_LEN} caracteres, "
                 f"mas tem {len(self.titulo)}."
+            )
+        if len(self.descricao) > DESCRICAO_MAX_LEN:
+            raise ValueError(
+                f"A descrição deve ter no máximo {DESCRICAO_MAX_LEN} caracteres, "
+                f"mas tem {len(self.descricao)}."
             )
 
     def touch(self) -> None:

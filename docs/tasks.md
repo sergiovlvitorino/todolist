@@ -1513,7 +1513,7 @@ DTs novas catalogadas abaixo (DT-038 a DT-042). Nenhuma é Crítica dado o model
 
 ### DT-038 — ⚠️ Ausência de limite de tamanho em `Task.descricao` e `KanbanColumn.nome`
 
-- [ ] **Prioridade:** Média
+- [x] **Prioridade:** Média
 - **Tipo:** Vulnerabilidade (validação de entrada) / Bug
 - **Descrição:** Identificado em revisão de segurança 2026-04-25. `Task.__post_init__` valida `titulo` contra `TITULO_MAX_LEN`, mas `descricao` aceita string de tamanho arbitrário. Idem para `KanbanColumn.nome`. Em app local single-user o risco de DoS é teórico, mas:
   1. Permite que o usuário cole acidentalmente um arquivo grande (megabytes) em campo livre de UI e infle o `data.db` — degradando RNF-02 (10k tarefas sem degradação).

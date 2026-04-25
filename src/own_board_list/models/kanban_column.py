@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from own_board_list.utils.constants import NOME_COLUNA_MAX_LEN
+
 
 @dataclass
 class KanbanColumn:
@@ -28,6 +30,12 @@ class KanbanColumn:
         """Valida os campos após a inicialização."""
         if not self.nome or not self.nome.strip():
             raise ValueError("O nome da coluna não pode ser vazio.")
+        if len(self.nome) > NOME_COLUNA_MAX_LEN:
+            raise ValueError(
+                f"O nome da coluna deve ter no máximo "
+                f"{NOME_COLUNA_MAX_LEN} caracteres, "
+                f"mas tem {len(self.nome)}."
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Serializa a coluna para um dicionário."""

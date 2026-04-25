@@ -7,6 +7,7 @@ from datetime import date, datetime
 import pytest
 
 from own_board_list.models.task import Prioridade, StatusTarefa, Task
+from own_board_list.utils.constants import DESCRICAO_MAX_LEN
 
 
 class TestTaskCreation:
@@ -48,6 +49,24 @@ class TestTaskCreation:
         titulo = "A" * 200
         task = Task(titulo=titulo)
         assert len(task.titulo) == 200
+
+    def test_descricao_acima_de_5000_chars_lanca_value_error(self) -> None:
+        """Deve lançar ValueError quando a descrição excede 5000 caracteres."""
+        descricao_longa = "X" * (DESCRICAO_MAX_LEN + 1)
+        with pytest.raises(ValueError, match="descrição"):
+            Task(titulo="Título OK", descricao=descricao_longa)
+
+    def test_descricao_com_exatamente_5000_chars_e_valida(self) -> None:
+        """Deve aceitar descrição com exatamente 5000 caracteres (limite)."""
+        descricao = "Y" * DESCRICAO_MAX_LEN
+        task = Task(titulo="Título OK", descricao=descricao)
+        assert len(task.descricao) == DESCRICAO_MAX_LEN
+
+    def test_descricao_com_4999_chars_e_valida(self) -> None:
+        """Deve aceitar descrição com limite-1 caracteres."""
+        descricao = "Z" * (DESCRICAO_MAX_LEN - 1)
+        task = Task(titulo="Título OK", descricao=descricao)
+        assert len(task.descricao) == DESCRICAO_MAX_LEN - 1
 
     def test_criacao_com_todos_os_campos(self) -> None:
         """Deve criar uma tarefa com todos os campos preenchidos."""
