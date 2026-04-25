@@ -1777,8 +1777,8 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-061 — Auditoria domínio×schema ✅
 **Descrição:** alinhar mensagens de erro entre validações de `Task`/`KanbanColumn` (DT-038/039/042) e `IntegrityError` do schema. **Camada:** models. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-108. **Status:** concluída 2026-04-25.
 
-### TASK-062 — Testes de migração com fixtures legadas
-**Descrição:** fixtures de bancos v1 (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura). **Camada:** testes. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-094..TC-099.
+### TASK-062 — Testes de migração com fixtures legadas ✅
+**Descrição:** fixtures de bancos v1 (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura). **Camada:** testes. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-094..TC-099. **Resultado (2026-04-25):** 34 testes verdes em `tests/test_database/test_migrations.py`; gates ruff check, ruff format, mypy todos OK.
 
 ### TASK-063 — Testes de constraints SQL diretas
 **Descrição:** `INSERT` cru com violações; `PRAGMA foreign_key_check` retorna vazio. **Camada:** testes. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-102, TC-103.

@@ -2026,8 +2026,141 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 
 ## 7. Casos de Teste — DT-040 + DT-013 (Migrations e Constraints — US-011)
 
-> TCs desta seção cobrem a feature de política de migrations e constraints de integridade do schema (spec 011-migrations-policy-schema-constraints). Adicionados em TASK-061/TASK-067.
+> TCs desta seção cobrem a feature de política de migrations e constraints de integridade do schema (spec 011-migrations-policy-schema-constraints). Adicionados em TASK-061/TASK-062/TASK-067.
 > **Nota:** Os números TC-093..TC-094 foram previamente usados por US-10 neste plano. Os TCs de migrations são registrados com seus IDs canônicos (conforme plan.md da spec 011) e estão implementados nos arquivos de teste correspondentes.
+
+#### TC-094 — Banco legado v1 válido migra para v2 sem perda (TASK-062)
+
+**Objetivo:** Garantir que um banco v1 com dados completamente válidos migra para v2 preservando todos os registros, sem acionar quarentena, e registra a versão correta em `schema_version`.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC094BancoLegadoValido`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-094a | `schema_version` == `SCHEMA_VERSION_ATUAL` após migration |
+| TC-094b | Contagem de tarefas inalterada |
+| TC-094c | Contagem de colunas inalterada |
+| TC-094d | Títulos originais preservados |
+| TC-094e | Prioridades válidas não alteradas |
+
+**Critérios de aceite:** todos os subcasos verdes; gates OK.
+
+**Resultado (2026-04-25):** PASS — 5 testes verdes.
+
+---
+
+#### TC-095 — Prioridade nula saneada para "Média" com quarentena (TASK-062)
+
+**Objetivo:** Garantir que tarefa com `prioridade IS NULL` é saneada para `"Média"` e o registro original é preservado na quarentena com motivo `"prioridade_invalida"`.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC095PrioridadeNula`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-095a | `prioridade` == `"Média"` após migration |
+| TC-095b | Arquivo de quarentena criado com motivo `"prioridade_invalida"` |
+| TC-095c | `saneamento_aplicado` == `{"prioridade": "Média"}` |
+| TC-095d | `payload_original.prioridade` é `None` |
+| TC-095e | `schema_version` == `SCHEMA_VERSION_ATUAL` após migration |
+
+**Critérios de aceite:** todos os subcasos verdes.
+
+**Resultado (2026-04-25):** PASS — 4 testes verdes.
+
+---
+
+#### TC-096 — Status desconhecido saneado para "Pendente" com quarentena (TASK-062)
+
+**Objetivo:** Garantir que tarefa com status fora do conjunto `{"Pendente", "Concluída"}` é saneada para `"Pendente"` e registrada na quarentena com motivo `"status_invalido"`.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC096StatusInvalido`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-096a | `status` == `"Pendente"` após migration |
+| TC-096b | Arquivo de quarentena criado com motivo `"status_invalido"` |
+| TC-096c | `payload_original.status` contém valor original (`"Fazendo"`) |
+| TC-096d | `schema_version` == `SCHEMA_VERSION_ATUAL` após migration |
+
+**Critérios de aceite:** todos os subcasos verdes.
+
+**Resultado (2026-04-25):** PASS — 4 testes verdes.
+
+---
+
+#### TC-097 — Tarefa com coluna fantasma realocada para "A Fazer" (TASK-062)
+
+**Objetivo:** Garantir que tarefa cujo `coluna_kanban` aponta para ID inexistente é realocada para a coluna `"A Fazer"` e registrada na quarentena com motivo `"coluna_inexistente"`.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC097ColunaFantasma`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-097a | `coluna_kanban` aponta para o `id` da coluna `"A Fazer"` após migration |
+| TC-097b | Arquivo de quarentena criado com motivo `"coluna_inexistente"` |
+| TC-097c | `payload_original.coluna_kanban` contém o ID fantasma original |
+| TC-097d | `saneamento_aplicado.coluna_kanban` é o ID de `"A Fazer"` |
+| TC-097e | `schema_version` == `SCHEMA_VERSION_ATUAL` após migration |
+
+**Critérios de aceite:** todos os subcasos verdes.
+
+**Resultado (2026-04-25):** PASS — 5 testes verdes.
+
+---
+
+#### TC-098 — criado_em/atualizado_em nulos preenchidos com UTC (TASK-062)
+
+**Objetivo:** Garantir que datas `NULL` em `criado_em`/`atualizado_em` são preenchidas com o timestamp UTC do momento da migration, e registradas na quarentena com observação `"data desconhecida (migrado em YYYY-MM-DD)"`.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC098DatasNulas`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-098a | `criado_em` e `atualizado_em` não nulos após migration |
+| TC-098b | Timestamps preenchidos são ISO válidos dentro do intervalo da migration |
+| TC-098c | Arquivo de quarentena criado com motivo `"data_ausente"` |
+| TC-098d | `saneamento_aplicado.observacao` contém `"data desconhecida"` e `"migrado em"` |
+| TC-098e | `payload_original.criado_em` e `atualizado_em` são `None` |
+| TC-098f | `schema_version` == `SCHEMA_VERSION_ATUAL` após migration |
+
+**Critérios de aceite:** todos os subcasos verdes.
+
+**Resultado (2026-04-25):** PASS — 6 testes verdes.
+
+---
+
+#### TC-099 — Versão futura gera VersaoFuturaError, arquivo intacto (TASK-062)
+
+**Objetivo:** Garantir que banco com `schema_version > SCHEMA_VERSION_ATUAL` gera `VersaoFuturaError` com mensagem clara e não modifica o arquivo de banco.
+
+**Arquivo de teste:** `tests/test_database/test_migrations.py` — classe `TestTC099VersaoFutura`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Verificação |
+|---|---|
+| TC-099a | `verificar_versao_futura` levanta `VersaoFuturaError` |
+| TC-099b | Mensagem do erro menciona versão do banco e da aplicação |
+| TC-099c | `err.versao_banco` e `err.versao_app` com valores corretos |
+| TC-099d | `MigrationService.executar` retorna `sucesso=False` para versão futura |
+| TC-099e | Tamanho do arquivo permanece inalterado após falha |
+| TC-099f | `schema_version` do banco não é alterada após falha |
+
+**Critérios de aceite:** todos os subcasos verdes; arquivo intacto confirmado.
+
+**Resultado (2026-04-25):** PASS — 5 testes verdes.
+
+---
 
 #### TC-104 — Indicador de progresso condicional no MigrationSplash (TASK-065)
 

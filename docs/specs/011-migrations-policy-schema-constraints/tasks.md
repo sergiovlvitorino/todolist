@@ -43,7 +43,7 @@
 | 13 | TASK-059 | Integrar `MigrationService` no bootstrap da aplicação antes de instanciar a UI | services | P | TASK-058 | TC-094 | ✅ |
 | 14 | TASK-060 | Criar `ui/splash.py` (`MigrationSplash`) com indicador condicional (> 1,5 s), exibição de quarentena e modo de erro com caminho do backup | ui | M | TASK-058 | TC-104, TC-105, TC-106 | ✅ |
 | 15 | TASK-061 | Auditoria de consistência domínio×schema: revisar mensagens de erro de `Task`/`KanbanColumn` para alinhar com `IntegrityError` do schema | models | P | TASK-055 | TC-108 | ✅ |
-| 16 | TASK-062 | Testes de migração — fixtures de bancos legados (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura) | testes | M | TASK-058 | TC-094..TC-099 |
+| 16 | TASK-062 | Testes de migração — fixtures de bancos legados (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura) | testes | M | TASK-058 | TC-094..TC-099 | ✅ |
 | 17 | TASK-063 | Testes de constraints SQL diretas (insert cru com violação) e `foreign_key_check` | testes | P | TASK-055 | TC-102, TC-103 | ✅ |
 | 18 | TASK-064 | Testes de backup/quarentena (rotação 3, escrita append-only, payload preservado) | testes | P | TASK-050, TASK-051 | TC-101, TC-095..TC-098 | ✅ |
 | 19 | TASK-065 | Testes de UI do splash (progresso > 1,5 s, exibição de quarentena, erro com caminho do backup) | testes | P | TASK-060 | TC-104, TC-105, TC-106 | ✅ |
