@@ -51,9 +51,18 @@ class Task:
     atualizado_em: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     def __post_init__(self) -> None:
-        """Valida os campos após a inicialização."""
+        """Valida os campos após a inicialização.
+
+        As regras aqui espelham exatamente os CHECK constraints do schema SQL
+        (migration v1→v2, TASK-055), garantindo defesa em profundidade: tanto
+        o domínio quanto o banco rejeitam o mesmo conjunto de estados inválidos,
+        com mensagens consistentes entre as duas camadas.
+        """
+        # Alinhado com CHECK(length(trim(titulo)) > 0) do schema
         if not self.titulo or not self.titulo.strip():
-            raise ValueError("O título da tarefa não pode ser vazio.")
+            raise ValueError(
+                "O título da tarefa não pode ser vazio ou conter apenas espaços."
+            )
         if len(self.titulo) > TITULO_MAX_LEN:
             raise ValueError(
                 f"O título deve ter no máximo {TITULO_MAX_LEN} caracteres, "
@@ -64,6 +73,21 @@ class Task:
                 f"A descrição deve ter no máximo {DESCRICAO_MAX_LEN} caracteres, "
                 f"mas tem {len(self.descricao)}."
             )
+        # Alinhado com CHECK(prioridade IN ('Baixa','Média','Alta')) do schema
+        prioridades_validas = {str(p) for p in Prioridade}
+        if str(self.prioridade) not in prioridades_validas:
+            raise ValueError(
+                f"Prioridade inválida: '{self.prioridade}'. "
+                f"Valores permitidos: {sorted(prioridades_validas)}."
+            )
+        # Alinhado com CHECK(status IN ('Pendente','Concluída')) do schema
+        status_validos = {str(s) for s in StatusTarefa}
+        if str(self.status) not in status_validos:
+            raise ValueError(
+                f"Status inválido: '{self.status}'. "
+                f"Valores permitidos: {sorted(status_validos)}."
+            )
+        # Alinhado com CHECK(posicao_kanban >= 0) do schema
         if self.posicao_kanban < 0:
             raise ValueError(
                 f"A posição Kanban deve ser >= 0, mas recebeu {self.posicao_kanban}."

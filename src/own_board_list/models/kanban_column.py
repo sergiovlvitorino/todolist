@@ -27,15 +27,25 @@ class KanbanColumn:
     criado_em: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
     def __post_init__(self) -> None:
-        """Valida os campos após a inicialização."""
+        """Valida os campos após a inicialização.
+
+        As regras aqui espelham exatamente os CHECK constraints do schema SQL
+        (migration v1→v2, TASK-055), garantindo defesa em profundidade: tanto
+        o domínio quanto o banco rejeitam o mesmo conjunto de estados inválidos,
+        com mensagens consistentes entre as duas camadas.
+        """
+        # Alinhado com CHECK(length(trim(nome)) > 0) do schema
         if not self.nome or not self.nome.strip():
-            raise ValueError("O nome da coluna não pode ser vazio.")
+            raise ValueError(
+                "O nome da coluna não pode ser vazio ou conter apenas espaços."
+            )
         if len(self.nome) > NOME_COLUNA_MAX_LEN:
             raise ValueError(
                 f"O nome da coluna deve ter no máximo "
                 f"{NOME_COLUNA_MAX_LEN} caracteres, "
                 f"mas tem {len(self.nome)}."
             )
+        # Alinhado com CHECK(posicao >= 0) do schema
         if self.posicao < 0:
             raise ValueError(
                 f"A posição da coluna deve ser >= 0, mas recebeu {self.posicao}."

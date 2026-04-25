@@ -55,6 +55,11 @@ class TestKanbanColumnValidacao:
         with pytest.raises(ValueError, match="nome da coluna não pode ser vazio"):
             KanbanColumn(nome="   ")
 
+    def test_mensagem_nome_vazio_menciona_espacos(self) -> None:
+        """Mensagem de erro deve mencionar que espaços também são inválidos."""
+        with pytest.raises(ValueError, match="espaços"):
+            KanbanColumn(nome="")
+
     def test_nome_acima_de_100_chars_levanta_value_error(self) -> None:
         """Deve levantar ValueError quando o nome excede 100 caracteres."""
         nome_longo = "A" * (NOME_COLUNA_MAX_LEN + 1)

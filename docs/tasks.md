@@ -1774,8 +1774,8 @@ Entrega especificada em [docs/specs/010-criar-card-kanban/](specs/010-criar-card
 ### TASK-060 — `MigrationSplash` (UI)
 **Descrição:** `ui/splash.py` com indicador de progresso condicional (> 1,5 s), exibição de caminho de quarentena, modo de erro com caminho do backup. **Camada:** ui. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-104, TC-105, TC-106.
 
-### TASK-061 — Auditoria domínio×schema
-**Descrição:** alinhar mensagens de erro entre validações de `Task`/`KanbanColumn` (DT-038/039/042) e `IntegrityError` do schema. **Camada:** models. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-108.
+### TASK-061 — Auditoria domínio×schema ✅
+**Descrição:** alinhar mensagens de erro entre validações de `Task`/`KanbanColumn` (DT-038/039/042) e `IntegrityError` do schema. **Camada:** models. **Esforço:** P. **Depende:** TASK-055. **TC aceite:** TC-108. **Status:** concluída 2026-04-25.
 
 ### TASK-062 — Testes de migração com fixtures legadas
 **Descrição:** fixtures de bancos v1 (válido, prioridade nula, status nulo, coluna fantasma, datas nulas, versão futura). **Camada:** testes. **Esforço:** M. **Depende:** TASK-058. **TC aceite:** TC-094..TC-099.

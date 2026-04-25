@@ -2022,4 +2022,34 @@ Lista de verificações obrigatórias antes de cada release. Deve ser executada 
 
 ---
 
+---
+
+## 7. Casos de Teste — DT-040 + DT-013 (Migrations e Constraints — US-011)
+
+> TCs desta seção cobrem a feature de política de migrations e constraints de integridade do schema (spec 011-migrations-policy-schema-constraints). Adicionados em TASK-061/TASK-067.
+> **Nota:** Os números TC-093..TC-094 foram previamente usados por US-10 neste plano. Os TCs de migrations são registrados com seus IDs canônicos (conforme plan.md da spec 011) e estão implementados nos arquivos de teste correspondentes.
+
+#### TC-108 — Defesa em profundidade: domínio×schema (TASK-061)
+
+**Objetivo:** Confirmar que tanto o domínio (`Task.__post_init__`, `KanbanColumn.__post_init__`) quanto o schema SQL (constraints CHECK/NOT NULL/FK da migration v1→v2) rejeitam o mesmo conjunto de estados inválidos, independentemente do caminho de entrada.
+
+**Arquivo de teste:** `tests/test_models/test_domain_schema_consistency.py`
+
+**Subconjuntos cobertos:**
+
+| Subcaso | Camada | Violação | Erro esperado |
+|---|---|---|---|
+| TC-108a | domínio + schema | `titulo` vazio ou apenas espaços | `ValueError` / `IntegrityError` |
+| TC-108b | domínio + schema | `prioridade` inválida ou NULL | `ValueError` / `IntegrityError` |
+| TC-108c | domínio + schema | `status` inválido ou NULL | `ValueError` / `IntegrityError` |
+| TC-108d | domínio + schema | `posicao_kanban` negativa | `ValueError` / `IntegrityError` |
+| TC-108e | domínio + schema | `nome` de coluna vazio ou apenas espaços | `ValueError` / `IntegrityError` |
+| TC-108f | domínio + schema | `posicao` de coluna negativa | `ValueError` / `IntegrityError` |
+| TC-108g | schema | FK `coluna_kanban` aponta para ID inexistente | `IntegrityError` |
+| TC-108h | schema | Task completamente válida é inserida com sucesso | sem erro (smoke positivo) |
+
+**Critérios de aceite:** todos os subcasos verdes em `pytest`; `ruff check`, `ruff format --check` e `mypy src/` sem erros.
+
+**Resultado (2026-04-25):** PASS — 20 testes verdes, gates verdes.
+
 *Fim do Plano de Testes — Own Board List v1.0*

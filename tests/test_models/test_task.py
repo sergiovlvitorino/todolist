@@ -30,12 +30,12 @@ class TestTaskCreation:
 
     def test_titulo_vazio_lanca_value_error(self) -> None:
         """Deve lançar ValueError quando o título é uma string vazia."""
-        with pytest.raises(ValueError, match="título"):
+        with pytest.raises(ValueError, match="título.*vazio"):
             Task(titulo="")
 
     def test_titulo_apenas_espacos_lanca_value_error(self) -> None:
         """Deve lançar ValueError quando o título contém apenas espaços."""
-        with pytest.raises(ValueError, match="título"):
+        with pytest.raises(ValueError, match="título.*vazio"):
             Task(titulo="   ")
 
     def test_titulo_acima_de_200_chars_lanca_value_error(self) -> None:
